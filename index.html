@@ -1,0 +1,2056 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#1DBF73">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="دوكتورك">
+<link rel="manifest" href="manifest.json">
+<title>Doktork</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<!-- Firebase (باك إند حقيقي — مشروع "دكتور" doktor-bdc21) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#F7F9F8;
+    --surface:#FFFFFF;
+    --primary:#1DBF73;
+    --primary-dark:#149A5C;
+    --primary-tint:#E5F9EF;
+    --accent:#C98A3E;
+    --accent-tint:#F8EDDC;
+    --text:#0F1720;
+    --text-muted:#74807D;
+    --border:#E4E8E7;
+    --danger:#B3413B;
+    --danger-tint:#F8E7E5;
+    --success:#149A5C;
+    --success-tint:#E5F9EF;
+    --warning:#C98A3E;
+    --radius-lg:20px;
+    --radius-md:12px;
+    --radius-sm:8px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:#E9EDEC;
+    font-family:'Tajawal','IBM Plex Sans Arabic',Tahoma,Arial,sans-serif;
+    color:var(--text);
+    display:flex;
+    justify-content:center;
+    min-height:100vh;
+  }
+  input.field-error,select.field-error,textarea.field-error{border-color:var(--danger)!important;background:var(--danger-tint);}
+  .field-err-msg{color:var(--danger);font-size:11.5px;margin-top:4px;font-weight:600;}
+  .ad-banner{border-radius:var(--radius-md);padding:14px 16px;font-weight:700;font-size:13.5px;margin-bottom:14px;position:relative;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.06);}
+  .update-bar{position:fixed;top:0;left:50%;transform:translateX(-50%);max-width:430px;width:100%;background:var(--text);color:#fff;padding:10px 16px;text-align:center;font-size:13px;font-weight:700;z-index:200;cursor:pointer;}
+  .bubble .btime{font-size:10px;opacity:.65;margin-top:4px;display:block;}
+  .chat-row{display:flex;gap:8px;align-items:flex-end;}
+  .chat-row.me{flex-direction:row-reverse;}
+  h1,h2,h3,h4{font-family:'IBM Plex Sans Arabic','Tajawal',Tahoma,sans-serif;margin:0;}
+  button{font-family:inherit;}
+  #phone{
+    width:100%;
+    max-width:430px;
+    min-height:100vh;
+    background:var(--bg);
+    position:relative;
+    box-shadow:0 0 40px rgba(11,79,68,.18);
+    display:flex;
+    flex-direction:column;
+  }
+  @media (min-width:520px){
+    body{padding:22px 0;}
+    #phone{min-height:860px;border-radius:36px;overflow:hidden;border:1px solid #c7d6d1;}
+  }
+  #topbar{
+    background:var(--surface);
+    border-bottom:1px solid var(--border);
+    padding:16px 18px 14px;
+    display:flex;
+    align-items:center;
+    gap:10px;
+    position:sticky;
+    top:0;
+    z-index:20;
+  }
+  #topbar .tb-back{
+    width:34px;height:34px;border-radius:50%;border:1px solid var(--border);background:var(--surface);
+    display:flex;align-items:center;justify-content:center;cursor:pointer;flex:none;color:var(--text);
+    font-size:16px;
+  }
+  #topbar .tb-title{font-size:18px;font-weight:700;flex:1;}
+  #topbar .tb-sub{font-size:12px;color:var(--text-muted);font-weight:400;display:block;margin-top:2px;}
+  #content{flex:1;overflow-y:auto;padding:16px 16px 96px;}
+  #bottomnav{
+    position:sticky;bottom:0;left:0;right:0;
+    background:var(--surface);
+    border-top:1px solid var(--border);
+    display:flex;
+    z-index:20;
+  }
+  .nav-btn{
+    flex:1;border:none;background:none;padding:10px 4px 8px;display:flex;flex-direction:column;align-items:center;gap:3px;
+    color:var(--text-muted);cursor:pointer;font-size:11.5px;font-weight:600;
+  }
+  .nav-btn .ic{font-size:19px;line-height:1;}
+  .nav-btn.active{color:var(--primary);}
+
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:16px;box-shadow:0 1px 3px rgba(15,23,32,.04);}
+  .stack{display:flex;flex-direction:column;gap:12px;}
+  .row{display:flex;align-items:center;gap:10px;}
+  .between{display:flex;align-items:center;justify-content:space-between;}
+  .muted{color:var(--text-muted);}
+  .small{font-size:12.5px;}
+  .tiny{font-size:11px;}
+  .pill{display:inline-flex;align-items:center;padding:3px 10px;border-radius:99px;font-size:11.5px;font-weight:600;}
+  .pill-primary{background:var(--primary-tint);color:var(--primary-dark);}
+  .pill-warning{background:var(--accent-tint);color:#8A5A20;}
+  .pill-danger{background:var(--danger-tint);color:var(--danger);}
+  .pill-success{background:var(--success-tint);color:var(--success);}
+  .pill-muted{background:#EEF2F0;color:var(--text-muted);}
+
+  .btn{border:none;border-radius:8px;padding:13px 16px;font-weight:700;font-size:14.5px;cursor:pointer;width:100%;transition:transform .06s ease;}
+  .btn:active{transform:scale(.98);}
+  .btn-primary{background:var(--primary);color:#fff;}
+  .btn-outline{background:none;border:1.5px solid var(--primary);color:var(--primary);}
+  .btn-ghost{background:none;color:var(--primary);font-weight:700;padding:8px;width:auto;}
+  .btn-danger{background:var(--danger);color:#fff;}
+  .btn-danger-outline{background:none;border:1.5px solid var(--danger);color:var(--danger);}
+  .btn-sm{padding:8px 12px;font-size:13px;width:auto;}
+  .btn:disabled{opacity:.45;cursor:not-allowed;}
+
+  label{font-size:13px;font-weight:600;color:var(--text);display:block;margin-bottom:6px;}
+  input,select,textarea{
+    width:100%;border:1.5px solid var(--border);border-radius:var(--radius-md);padding:11px 13px;font-size:14.5px;
+    font-family:inherit;background:#fff;color:var(--text);
+  }
+  input:focus,select:focus,textarea:focus{outline:2px solid var(--primary-tint);border-color:var(--primary);}
+  .field{margin-bottom:13px;}
+  .err{color:var(--danger);font-size:12px;margin-top:5px;display:none;}
+  .helper{font-size:12px;color:var(--text-muted);margin-top:5px;}
+
+  .avatar{border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;flex:none;}
+  .tabs{display:flex;gap:6px;background:#EAF0EE;padding:4px;border-radius:12px;}
+  .tab{flex:1;text-align:center;padding:9px 4px;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;color:var(--text-muted);}
+  .tab.active{background:#fff;color:var(--primary-dark);box-shadow:0 1px 3px rgba(0,0,0,.08);}
+  .chip{padding:7px 13px;border-radius:99px;border:1.5px solid var(--border);font-size:13px;font-weight:600;cursor:pointer;background:#fff;color:var(--text);white-space:nowrap;}
+  .chip.active{background:var(--primary);border-color:var(--primary);color:#fff;}
+  .chiprow{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;}
+  .chiprow::-webkit-scrollbar{display:none;}
+  .divider{height:1px;background:var(--border);margin:4px 0;}
+  .empty{text-align:center;padding:36px 14px;color:var(--text-muted);}
+  .empty .ic{font-size:34px;margin-bottom:8px;}
+  a.linklike{color:var(--primary);text-decoration:none;font-weight:700;}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .toast{
+    position:fixed;bottom:96px;left:50%;transform:translateX(-50%);
+    background:#1C2B26;color:#fff;padding:11px 20px;border-radius:99px;font-size:13.5px;font-weight:600;
+    z-index:99;box-shadow:0 6px 20px rgba(0,0,0,.25);max-width:90%;text-align:center;
+  }
+  .slotbtn{border:1.5px solid var(--border);background:#fff;border-radius:10px;padding:10px 4px;font-size:13px;font-weight:700;cursor:pointer;text-align:center;}
+  .slotbtn.taken{opacity:.35;text-decoration:line-through;cursor:not-allowed;background:#F2F4F3;}
+  .slotbtn.sel{background:var(--primary);color:#fff;border-color:var(--primary);}
+  .daybtn{flex:none;border:1.5px solid var(--border);border-radius:12px;padding:8px 12px;text-align:center;cursor:pointer;background:#fff;min-width:58px;}
+  .daybtn.sel{background:var(--primary);border-color:var(--primary);color:#fff;}
+  .daybtn .dlabel{font-size:11px;font-weight:700;}
+  .daybtn .dnum{font-size:15px;font-weight:800;margin-top:2px;}
+  .star{color:#DADFDD;font-size:16px;}
+  .star.on{color:var(--accent);}
+  .bubble{max-width:78%;padding:10px 13px;border-radius:14px;font-size:13.5px;line-height:1.55;}
+  .bubble.me{background:var(--primary);color:#fff;border-bottom-left-radius:4px;align-self:flex-end;}
+  .bubble.them{background:#fff;border:1px solid var(--border);border-bottom-right-radius:4px;align-self:flex-start;}
+  .welcome-hero{
+    background:linear-gradient(160deg,var(--primary) 0%,var(--primary-dark) 100%);
+    color:#fff;border-radius:0 0 34px 34px;padding:52px 26px 46px;text-align:center;
+  }
+  .switch{position:relative;width:42px;height:24px;border-radius:99px;background:var(--border);cursor:pointer;flex:none;}
+  .switch.on{background:var(--primary);}
+  .switch .knob{position:absolute;top:2px;right:2px;width:20px;height:20px;border-radius:50%;background:#fff;transition:transform .15s;box-shadow:0 1px 2px rgba(0,0,0,.3);}
+  .switch.on .knob{transform:translateX(-18px);}
+  ::-webkit-scrollbar{width:6px;}
+  ::-webkit-scrollbar-thumb{background:#c6d3ce;border-radius:99px;}
+</style>
+</head>
+<body>
+<div id="phone">
+  <div id="updateBar" class="update-bar" style="display:none;" onclick="forceReload()">🔄 يوجد تحديث جديد للتطبيق — اضغط هنا للتحديث الآن</div>
+  <div id="topbar" style="display:none;"></div>
+  <div id="content"></div>
+  <div id="bottomnav" style="display:none;"></div>
+</div>
+
+<script>
+/* ============================= Firebase — الباك إند الحقيقي ============================= */
+const firebaseConfig = {
+  apiKey: "AIzaSyCfe9ILo6Ilo0Atkcv0Dr7g7e5TXNqXhHI",
+  authDomain: "doktor-bdc21.firebaseapp.com",
+  projectId: "doktor-bdc21",
+  storageBucket: "doktor-bdc21.firebasestorage.app",
+  messagingSenderId: "1017373932291",
+  appId: "1:1017373932291:web:b8b6b89381e3e936ee8736",
+  measurementId: "G-BYWGN7W9X6"
+};
+let fireDB = null, firebaseReady = false, firebaseInitError = null;
+try{
+  firebase.initializeApp(firebaseConfig);
+  fireDB = firebase.firestore();
+  firebaseReady = true;
+}catch(e){
+  firebaseInitError = e;
+  console.error('Firebase init failed', e);
+}
+
+/* ============================= DOKTORK — بيانات وحالة التطبيق ============================= */
+
+const APP_DAYS = [
+  {key:'sat',label:'السبت',jsDay:6},
+  {key:'sun',label:'الأحد',jsDay:0},
+  {key:'mon',label:'الاثنين',jsDay:1},
+  {key:'tue',label:'الثلاثاء',jsDay:2},
+  {key:'wed',label:'الأربعاء',jsDay:3},
+  {key:'thu',label:'الخميس',jsDay:4},
+  {key:'fri',label:'الجمعة',jsDay:5},
+];
+const AVATAR_COLORS = ['#0F6B5C','#C98A3E','#3D6EA5','#8A5A9E','#B3413B','#2F8F5B','#5B6B66','#0B4F44','#A16207','#2E5C87'];
+const DEFAULT_SPECIALTIES = ['باطنة','أطفال','نساء وتوليد','جلدية','أسنان','عيون','أنف وأذن وحنجرة','عظام','قلب وأوعية دموية','مخ وأعصاب','مسالك بولية','نفسية وعصبية','أورام','كلى وجهاز بولي','جهاز هضمي وكبد','تخسيس وتغذية'];
+const DEFAULT_GOVS = [
+  {name:'القاهرة',areas:['مدينة نصر','المعادي','مصر الجديدة','الزمالك','التجمع الخامس','حلوان','المقطم']},
+  {name:'الجيزة',areas:['الدقي','المهندسين','6 أكتوبر','الشيخ زايد','فيصل','الهرم']},
+  {name:'الإسكندرية',areas:['سموحة','ميامي','سيدي جابر','العجمي','لوران']},
+  {name:'الشرقية',areas:['الزقازيق','العاشر من رمضان','بلبيس']},
+  {name:'الدقهلية',areas:['المنصورة','طلخا','ميت غمر']},
+  {name:'القليوبية',areas:['بنها','شبرا الخيمة']},
+];
+const STATUS_LABELS = {pending:'قيد المراجعة',approved:'مقبول',rejected:'مرفوض',suspended:'موقوف'};
+const APPT_LABELS = {pending_admin:'قيد مراجعة الإدارة',confirmed:'مؤكد',waiting:'في الانتظار',attended:'حضر العميل',noshow:'لم يحضر',done:'تم الكشف',cancelled:'ملغي'};
+const APPT_COLORS = {pending_admin:'warning',confirmed:'primary',waiting:'warning',attended:'success',noshow:'danger',done:'success',cancelled:'danger'};
+
+const APP_VERSION = '2.0.0';
+let DB = { directory:null, patients:null, doctors:null, appointments:null, reviews:null, messages:null, notifications:null, ads:null };
+const DEFAULTS = {
+  directory:{specialties:DEFAULT_SPECIALTIES.slice(),governorates:JSON.parse(JSON.stringify(DEFAULT_GOVS)),adminPassword:'851374'},
+  patients:{}, doctors:{}, appointments:[], reviews:[], messages:{}, notifications:{}, ads:[]
+};
+
+let S = {
+  ready:false,
+  role:null,        // 'patient' | 'doctor' | 'admin'
+  screen:'welcome',
+  session:null,     // current patient/doctor id, or 'admin'
+  params:{},
+  authMode:'login',
+  toast:null,
+  draft:{},
+};
+
+/* ---------- حفظ جلسة الدخول محليًا (عشان التطبيق ما يرجعش يطلب تسجيل دخول كل مرة) ---------- */
+function persistSession(){
+  try{
+    if(S.role && S.session){ localStorage.setItem('doktork_session', JSON.stringify({role:S.role, session:S.session})); }
+    else{ localStorage.removeItem('doktork_session'); }
+  }catch(e){ /* التخزين المحلي غير متاح، لا مشكلة */ }
+}
+function restoreSession(){
+  try{
+    const raw = localStorage.getItem('doktork_session');
+    if(!raw) return;
+    const saved = JSON.parse(raw);
+    if(!saved || !saved.role || !saved.session) return;
+    const table = saved.role==='patient'?DB.patients: saved.role==='doctor'?DB.doctors: null;
+    if(saved.role==='admin'){ S.role='admin'; S.session='admin'; S.screen='admin-dashboard'; return; }
+    const user = table && table[saved.session];
+    if(!user || user.status==='rejected'){ localStorage.removeItem('doktork_session'); return; }
+    S.role = saved.role; S.session = saved.session;
+    if(user.status==='pending'){ S.screen = saved.role+'-pending'; return; }
+    if(user.status==='suspended'){ S.screen = saved.role+'-pending'; return; }
+    S.screen = saved.role==='patient' ? 'patient-home' : 'doctor-dashboard';
+  }catch(e){ /* تجاهل أي خطأ في الجلسة المحفوظة */ }
+}
+
+/* ---------- تخزين (Firestore حقيقي — يتزامن بين كل الأجهزة) ---------- */
+function fireDocRef(key){ return fireDB.collection('app_data').doc(key); }
+function metaDocRef(){ return fireDB.collection('app_meta').doc('version'); }
+function watchForUpdates(){
+  try{
+    metaDocRef().set({version:APP_VERSION, updatedAt:Date.now()}, {merge:true}).catch(()=>{});
+    metaDocRef().onSnapshot(doc=>{
+      if(!doc.exists) return;
+      const serverVersion = doc.data().version;
+      if(serverVersion && serverVersion!==APP_VERSION){
+        const bar = document.getElementById('updateBar');
+        if(bar) bar.style.display='block';
+      }
+    });
+  }catch(e){ /* لو تعذر، التطبيق يعمل عادي بدون فحص تحديثات */ }
+}
+function forceReload(){ location.reload(true); }
+
+async function loadKey(key){
+  try{
+    const doc = await fireDocRef(key).get();
+    if(doc.exists){ DB[key] = JSON.parse(doc.data().value); }
+    else { DB[key] = JSON.parse(JSON.stringify(DEFAULTS[key])); await saveKey(key); }
+  }catch(e){
+    console.error('load failed', key, e);
+    DB[key] = JSON.parse(JSON.stringify(DEFAULTS[key]));
+  }
+}
+async function saveKey(key){
+  try{ await fireDocRef(key).set({ value: JSON.stringify(DB[key]), updatedAt: Date.now() }); }
+  catch(e){ console.error('save failed', key, e); showToast('تعذر حفظ البيانات، تحقق من اتصال الإنترنت'); }
+}
+function attachRealtimeListeners(){
+  Object.keys(DEFAULTS).forEach(key=>{
+    fireDocRef(key).onSnapshot(doc=>{
+      if(!doc.exists) return;
+      let newVal;
+      try{ newVal = JSON.parse(doc.data().value); }catch(e){ return; }
+      if(key==='notifications' && S.ready && S.session){
+        const newCount = (newVal[S.session]||[]).length;
+        const oldCount = ((DB.notifications||{})[S.session]||[]).length;
+        if(newCount>oldCount) playNotifySound();
+      }
+      DB[key] = newVal;
+      if(S.ready) render();
+    }, err=>console.error('listen failed', key, err));
+  });
+}
+function playNotifySound(){
+  try{
+    const ctx = new (window.AudioContext||window.webkitAudioContext)();
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.type='sine'; o.frequency.value=880;
+    g.gain.setValueAtTime(0.0001, ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.22, ctx.currentTime+0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime+0.35);
+    o.connect(g); g.connect(ctx.destination);
+    o.start(); o.stop(ctx.currentTime+0.35);
+  }catch(e){ /* الجهاز مانعش الصوت تلقائيًا لحد ما المستخدم يتفاعل مع الصفحة، وده طبيعي */ }
+}
+async function initDB(){
+  if(!firebaseReady){
+    document.getElementById('content').innerHTML = `<div style="padding:60px 22px;text-align:center;">
+      <div style="font-size:42px;margin-bottom:14px;">⚠️</div>
+      <div style="font-weight:700;margin-bottom:10px;font-size:16px;">تعذر الاتصال بقاعدة البيانات</div>
+      <div class="muted small" style="line-height:1.8;">تأكد من فتح الصفحة عبر رابط حقيقي (https) متصل بالإنترنت، وأن قواعد Firestore منشورة في مشروع Firebase.<br><br>
+      <span style="font-family:monospace;font-size:11px;direction:ltr;display:inline-block;">${esc(firebaseInitError && firebaseInitError.message || 'unknown error')}</span></div>
+    </div>`;
+    return;
+  }
+  try{
+    await Promise.all(Object.keys(DEFAULTS).map(loadKey));
+  }catch(e){
+    document.getElementById('content').innerHTML = `<div style="padding:60px 22px;text-align:center;">
+      <div style="font-size:42px;margin-bottom:14px;">⚠️</div>
+      <div style="font-weight:700;margin-bottom:10px;font-size:16px;">تعذر تحميل البيانات من Firebase</div>
+      <div class="muted small" style="line-height:1.8;">غالبًا قواعد الأمان (Firestore Rules) لسه متعملهاش Publish، أو غير مضبوطة بشكل صحيح.<br><br>
+      <span style="font-family:monospace;font-size:11px;direction:ltr;display:inline-block;">${esc(e && e.message || 'unknown error')}</span></div>
+    </div>`;
+    console.error('initDB failed', e);
+    return;
+  }
+  restoreSession();
+  S.ready = true;
+  render();
+  attachRealtimeListeners();
+  watchForUpdates();
+}
+
+/* ---------- أدوات مساعدة ---------- */
+function uid(prefix){ return prefix+'_'+Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
+function simpleHash(str){ let h=0; for(let i=0;i<str.length;i++){ h=(h*31 + str.charCodeAt(i))|0; } return 'h'+h; }
+function esc(s){ return (s==null?'':String(s)).replace(/[&<>"']/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function colorFor(id){ let sum=0; for(const c of String(id)) sum+=c.charCodeAt(0); return AVATAR_COLORS[sum%AVATAR_COLORS.length]; }
+function avatarHTML(name,id,size,photo){
+  size = size||44;
+  if(photo){
+    return `<div class="avatar" style="width:${size}px;height:${size}px;padding:0;overflow:hidden;"><img src="${photo}" style="width:100%;height:100%;object-fit:cover;display:block;"></div>`;
+  }
+  const letter = (name||'?').trim().charAt(0) || '؟';
+  return `<div class="avatar" style="width:${size}px;height:${size}px;background:${colorFor(id||name||'x')};font-size:${size*0.42}px;">${esc(letter)}</div>`;
+}
+/* ---------- رفع وضغط الصور (بدون سيرفر تخزين — تُحفظ داخل Firestore كنص base64) ---------- */
+function pickImage(maxDim, quality, cb){
+  const inp = document.createElement('input');
+  inp.type = 'file';
+  inp.accept = 'image/*';
+  inp.onchange = e=>{
+    const file = e.target.files && e.target.files[0];
+    if(!file) return;
+    if(file.size > 10*1024*1024){ showToast('حجم الصورة كبير جدًا، اختر صورة أصغر'); return; }
+    const reader = new FileReader();
+    reader.onload = ev=>{
+      const img = new Image();
+      img.onload = ()=>{
+        let w = img.width, h = img.height;
+        if(w>h){ if(w>maxDim){ h=Math.round(h*maxDim/w); w=maxDim; } }
+        else { if(h>maxDim){ w=Math.round(w*maxDim/h); h=maxDim; } }
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(img,0,0,w,h);
+        cb(canvas.toDataURL('image/jpeg', quality));
+      };
+      img.onerror = ()=>showToast('تعذر قراءة الصورة، جرّب صورة تانية');
+      img.src = ev.target.result;
+    };
+    reader.onerror = ()=>showToast('تعذر قراءة الصورة');
+    reader.readAsDataURL(file);
+  };
+  inp.click();
+}
+function starsHTML(rating,count){
+  rating = rating||0;
+  let s='';
+  for(let i=1;i<=5;i++){ s+=`<span class="star ${i<=Math.round(rating)?'on':''}">★</span>`; }
+  return `<span style="display:inline-flex;align-items:center;gap:3px;">${s}<span class="small muted" style="margin-right:4px;">${rating? rating.toFixed(1):'جديد'} ${count?('· '+count+' تقييم'):''}</span></span>`;
+}
+function fmtDate(dstr){
+  const d = new Date(dstr+'T00:00:00');
+  const months=['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+  const dayName = APP_DAYS.find(x=>x.jsDay===d.getDay());
+  return `${dayName?dayName.label:''} ${d.getDate()} ${months[d.getMonth()]}`;
+}
+function todayStr(offset){ const d=new Date(); d.setDate(d.getDate()+(offset||0)); return d.toISOString().slice(0,10); }
+function nowMinutes(){ const d=new Date(); return d.getHours()*60+d.getMinutes(); }
+function timeToMinutes(t){ const [h,m]=t.split(':').map(Number); return h*60+m; }
+function minutesToTime(m){ const h=Math.floor(m/60); const mm=m%60; return String(h).padStart(2,'0')+':'+String(mm).padStart(2,'0'); }
+function validPhone(p){ return /^01[0125][0-9]{8}$/.test(p); }
+function whatsappLink(phone){ return 'https://wa.me/2'+phone; }
+function mapsLink(addr){ return 'https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(addr); }
+function showToast(msg){ S.toast = msg; render(); setTimeout(()=>{ if(S.toast===msg){ S.toast=null; render(); } },2600); }
+function go(screen, params){ S.screen=screen; S.params = params||{}; window.scrollTo(0,0); render(); }
+
+/* ---------- إشعارات ورسائل ---------- */
+function addNotification(userId, text){
+  if(!DB.notifications[userId]) DB.notifications[userId]=[];
+  DB.notifications[userId].unshift({id:uid('nt'), text, time:Date.now(), read:false});
+  saveKey('notifications');
+}
+function threadId(type,userId){ return type+'_'+userId; }
+function ensureThread(type,userId){
+  const tid = threadId(type,userId);
+  if(!DB.messages[tid]) DB.messages[tid] = {type,userId,status:'new',messages:[],updatedAt:Date.now()};
+  return tid;
+}
+function sendMessage(type,userId,from,text){
+  const tid = ensureThread(type,userId);
+  DB.messages[tid].messages.push({from,text,time:Date.now()});
+  DB.messages[tid].updatedAt = Date.now();
+  DB.messages[tid].status = from==='admin' ? 'replied' : 'new';
+  saveKey('messages');
+  if(from==='admin'){ addNotification(userId, 'لديك رد جديد من الإدارة'); }
+  else { addNotification('admin', 'رسالة جديدة'); }
+}
+
+/* ---------- أطباء / مواعيد ---------- */
+function doctorList(){ return Object.values(DB.doctors); }
+function patientList(){ return Object.values(DB.patients); }
+function approvedDoctors(){ return doctorList().filter(d=>d.status==='approved'); }
+
+function slotsForDoctorOnDate(doctor, dateStr){
+  const d = new Date(dateStr+'T00:00:00');
+  const wd = APP_DAYS.find(x=>x.jsDay===d.getDay());
+  if(!wd) return [];
+  const cfg = doctor.workingHours && doctor.workingHours[wd.key];
+  if(!cfg || !cfg.enabled) return [];
+  const slots=[];
+  let t = timeToMinutes(cfg.start);
+  const end = timeToMinutes(cfg.end);
+  const dur = cfg.slotMinutes || 30;
+  while(t+dur<=end){ slots.push(minutesToTime(t)); t+=dur; }
+  const isToday = dateStr===todayStr(0);
+  const nm = nowMinutes();
+  return slots.filter(s => !isToday || timeToMinutes(s) > nm+15);
+}
+function isSlotTaken(doctorId,dateStr,time){
+  return DB.appointments.some(a=>a.doctorId===doctorId && a.date===dateStr && a.time===time && a.status!=='cancelled');
+}
+function nextAvailable(doctor){
+  for(let i=0;i<14;i++){
+    const ds = todayStr(i);
+    const slots = slotsForDoctorOnDate(doctor,ds);
+    for(const t of slots){ if(!isSlotTaken(doctor.id,ds,t)) return {date:ds,time:t}; }
+  }
+  return null;
+}
+function bookAppointment(doctorId, dateStr, time){
+  const doctor = DB.doctors[doctorId];
+  if(!doctor || doctor.status!=='approved') return {ok:false,msg:'هذا الطبيب غير متاح للحجز حاليًا'};
+  if(isSlotTaken(doctorId,dateStr,time)) return {ok:false,msg:'عذرًا، تم حجز هذا الموعد للتو من عميل آخر'};
+  const patient = DB.patients[S.session];
+  const appt = {
+    id:uid('APT'), patientId:patient.id, doctorId, date:dateStr, time,
+    status:'pending_admin', price:doctor.price, createdAt:Date.now()
+  };
+  DB.appointments.push(appt);
+  saveKey('appointments');
+  addNotification(patient.id, `تم استلام طلب حجزك مع د. ${doctor.name} يوم ${fmtDate(dateStr)} الساعة ${time}، وهو الآن قيد مراجعة الإدارة لتأكيده`);
+  addNotification('admin', `طلب حجز جديد من ${patient.name} مع د. ${doctor.name} يوم ${fmtDate(dateStr)} الساعة ${time}`);
+  return {ok:true, appt};
+}
+function adminConfirmAppt(id){
+  const a = DB.appointments.find(x=>x.id===id);
+  if(!a) return;
+  a.status='confirmed'; saveKey('appointments');
+  const p=DB.patients[a.patientId], d=DB.doctors[a.doctorId];
+  if(p) addNotification(p.id, `تم تأكيد حجزك مع د. ${d?d.name:''} يوم ${fmtDate(a.date)} الساعة ${a.time}`);
+  if(d) addNotification(d.id, `حجز جديد مؤكد من ${p?p.name:''} يوم ${fmtDate(a.date)} الساعة ${a.time}`);
+  showToast('تم تأكيد الحجز'); render();
+}
+function cancelAppointment(apptId, byRole){
+  const a = DB.appointments.find(x=>x.id===apptId);
+  if(!a) return {ok:false,msg:'الحجز غير موجود'};
+  if(byRole==='patient'){
+    const dt = new Date(a.date+'T'+a.time+':00');
+    if(dt.getTime() - Date.now() < 2*60*60*1000){
+      return {ok:false,msg:'لا يمكن إلغاء الحجز قبل أقل من ساعتين من الموعد'};
+    }
+  }
+  a.status='cancelled';
+  saveKey('appointments');
+  const doctor = DB.doctors[a.doctorId], patient = DB.patients[a.patientId];
+  if(byRole==='patient' && doctor) addNotification(doctor.id, `قام ${patient.name} بإلغاء حجزه يوم ${fmtDate(a.date)} الساعة ${a.time}`);
+  if(byRole==='doctor' && patient) addNotification(patient.id, `تم إلغاء حجزك مع د. ${doctor.name} يوم ${fmtDate(a.date)} الساعة ${a.time}`);
+  return {ok:true};
+}
+function setApptStatus(apptId, status){
+  const a = DB.appointments.find(x=>x.id===apptId);
+  if(!a) return;
+  a.status = status;
+  saveKey('appointments');
+  const patient = DB.patients[a.patientId], doctor=DB.doctors[a.doctorId];
+  if(status==='done' && patient) addNotification(patient.id, `تم الكشف مع د. ${doctor.name}، يمكنك الآن تقييم الطبيب`);
+  if(status==='cancelled' && patient) addNotification(patient.id, `تم إلغاء حجزك مع د. ${doctor.name}`);
+}
+function recomputeRating(doctorId){
+  const revs = DB.reviews.filter(r=>r.doctorId===doctorId && r.approved);
+  const doctor = DB.doctors[doctorId];
+  if(!doctor) return;
+  if(revs.length===0){ doctor.rating=0; doctor.ratingCount=0; }
+  else{
+    doctor.rating = revs.reduce((s,r)=>s+r.stars,0)/revs.length;
+    doctor.ratingCount = revs.length;
+  }
+  saveKey('doctors');
+}
+
+/* ============================= العرض (Render) ============================= */
+function render(){
+  const topbar = document.getElementById('topbar');
+  const content = document.getElementById('content');
+  const bottomnav = document.getElementById('bottomnav');
+
+  if(!S.ready){
+    topbar.style.display='none'; bottomnav.style.display='none';
+    content.innerHTML = `<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:70vh;gap:14px;">
+      ${avatarHTML('د','app',60)}<div class="muted">جارِ تحميل دوكتورك...</div></div>`;
+    return;
+  }
+
+  const view = buildScreen();
+  topbar.style.display = view.topbar===false ? 'none' : 'flex';
+  topbar.innerHTML = view.topbar===false ? '' : view.topbarHTML;
+  content.innerHTML = view.html;
+  bottomnav.style.display = view.nav===false ? 'none' : 'flex';
+  bottomnav.innerHTML = view.nav===false ? '' : view.navHTML;
+
+  const existingToast = document.querySelector('.toast');
+  if(existingToast) existingToast.remove();
+  if(S.toast){
+    const t = document.createElement('div');
+    t.className='toast'; t.textContent=S.toast;
+    document.getElementById('phone').appendChild(t);
+  }
+  content.scrollTop = 0;
+}
+
+function topbarHTML(title, opts){
+  opts=opts||{};
+  return `<div class="tb-back" onclick="${opts.onBack||'history.back()'}" style="${opts.showBack===false?'visibility:hidden':''}">‹</div>
+  <div class="tb-title">${esc(title)}${opts.sub?`<span class="tb-sub">${esc(opts.sub)}</span>`:''}</div>
+  ${opts.right||''}`;
+}
+
+function navBtn(label, icon, screen, activeScreens){
+  const active = activeScreens.includes(S.screen);
+  return `<button class="nav-btn ${active?'active':''}" onclick="go('${screen}')"><span class="ic">${icon}</span>${esc(label)}</button>`;
+}
+
+function buildScreen(){
+  if(S.role==='patient' && S.session) return patientRouter();
+  if(S.role==='doctor' && S.session) return doctorRouter();
+  if(S.role==='admin' && S.session) return adminRouter();
+  return authRouter();
+}
+
+/* ============================= شاشات الدخول ============================= */
+function authRouter(){
+  switch(S.screen){
+    case 'welcome': return screenWelcome();
+    case 'admin-login': return screenAdminLogin();
+    case 'patient-auth': return screenPatientAuth();
+    case 'doctor-auth': return screenDoctorAuth();
+    case 'patient-pending': return screenPendingStatus('patient');
+    case 'doctor-pending': return screenPendingStatus('doctor');
+    default: S.screen='welcome'; return screenWelcome();
+  }
+}
+
+function screenWelcome(){
+  return { topbar:false, nav:false, html:`
+    <div class="welcome-hero" style="margin:-16px -16px 22px;">
+      <div style="width:74px;height:74px;background:#fff;border-radius:22px;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;font-size:34px;color:var(--primary);font-weight:800;">+</div>
+      <h1 style="font-size:26px;">دوكتورك</h1>
+      <div style="opacity:.9;margin-top:8px;font-size:14px;">احجز موعدك مع أفضل الأطباء بسهولة وسرعة</div>
+    </div>
+    <div class="stack">
+      <div style="text-align:center;font-weight:700;font-size:15px;margin-bottom:2px;">اختر طريقة الدخول</div>
+      <button class="btn btn-primary" style="padding:17px;font-size:15.5px;" onclick="go('patient-auth')">👤 دخول كعميل</button>
+      <button class="btn btn-outline" style="padding:17px;font-size:15.5px;" onclick="go('doctor-auth')">🩺 دخول كدكتور</button>
+    </div>
+    <div style="text-align:center;margin-top:34px;">
+      <span class="tiny muted" style="cursor:pointer;text-decoration:underline;" onclick="go('admin-login')">الإدارة</span>
+    </div>
+  `};
+}
+
+function screenAdminLogin(){
+  const err = S.draft.adminErr;
+  return { topbar:true, nav:false,
+    topbarHTML: topbarHTML('دخول الإدارة', {onBack:"go('welcome')"}),
+    html:`
+    <div class="card stack" style="margin-top:20px;">
+      <div style="text-align:center;font-size:30px;">🔐</div>
+      <div class="field" style="margin-bottom:0;">
+        <label>كلمة مرور الإدارة</label>
+        <input type="password" id="adminPass" placeholder="أدخل كلمة المرور" onkeydown="if(event.key==='Enter')adminLoginSubmit()">
+        ${err?`<div class="err" style="display:block;">${esc(err)}</div>`:''}
+      </div>
+      <button class="btn btn-primary" onclick="adminLoginSubmit()">دخول</button>
+    </div>`
+  };
+}
+function adminLoginSubmit(){
+  const v = document.getElementById('adminPass').value;
+  if(v === DB.directory.adminPassword){
+    S.draft.adminErr=null; S.role='admin'; S.session='admin'; persistSession(); go('admin-dashboard');
+  } else {
+    S.draft.adminErr='كلمة المرور غير صحيحة'; render();
+  }
+}
+
+function screenPatientAuth(){ return screenAuth('patient'); }
+function screenDoctorAuth(){ return screenAuth('doctor'); }
+
+function screenAuth(role){
+  const isPatient = role==='patient';
+  const mode = S.authMode;
+  const err = S.draft.authErr;
+  return { topbar:true, nav:false,
+    topbarHTML: topbarHTML(isPatient?'حساب العميل':'حساب الدكتور', {onBack:"go('welcome')"}),
+    html:`
+    <div class="tabs" style="margin-bottom:18px;">
+      <div class="tab ${mode==='login'?'active':''}" onclick="S.authMode='login';S.draft={};render()">تسجيل الدخول</div>
+      <div class="tab ${mode==='register'?'active':''}" onclick="S.authMode='register';S.draft={};render()">حساب جديد</div>
+    </div>
+    ${mode==='login' ? loginForm(role, err) : registerForm(role, err)}
+  `};
+}
+
+function loginForm(role, err){
+  return `
+  <div class="card stack">
+    <div class="field">
+      <label>رقم الهاتف أو البريد الإلكتروني</label>
+      <input id="li_id" placeholder="01xxxxxxxxx">
+    </div>
+    <div class="field" style="margin-bottom:0;">
+      <label>كلمة المرور</label>
+      <input id="li_pw" type="password" placeholder="كلمة المرور" onkeydown="if(event.key==='Enter')authSubmitLogin('${role}')">
+      ${err?`<div class="err" style="display:block;">${esc(err)}</div>`:''}
+    </div>
+  </div>
+  <button class="btn btn-primary" style="margin-top:16px;" onclick="authSubmitLogin('${role}')">دخول</button>`;
+}
+function authSubmitLogin(role){
+  const idv = document.getElementById('li_id').value.trim();
+  const pw = document.getElementById('li_pw').value;
+  const table = role==='patient'?DB.patients:DB.doctors;
+  const user = Object.values(table).find(u=> u.phone===idv || (u.email && u.email===idv));
+  if(!user || user.passwordHash !== simpleHash(pw)){
+    S.draft.authErr='بيانات الدخول غير صحيحة'; render(); return;
+  }
+  S.draft.authErr=null;
+  S.role=role; S.session=user.id;
+  if(user.status==='pending'){ persistSession(); go(role+'-pending'); return; }
+  if(user.status==='rejected'){ S.role=null; S.session=null; S.draft.authErr='تم رفض طلب هذا الحساب، تواصل مع الإدارة'; render(); return; }
+  if(user.status==='suspended'){ S.role=null; S.session=null; S.draft.authErr='هذا الحساب موقوف حاليًا'; render(); return; }
+  persistSession();
+  go(role==='patient' ? 'patient-home' : 'doctor-dashboard');
+}
+
+/* ---------- أدوات النموذج: حفظ القيم المدخلة + تحديد الحقل الخاطئ فقط بدل مسح كل شيء ---------- */
+function rf(id){ return (S.draft.regFields && S.draft.regFields[id]) || ''; }
+function rfChecked(id){ return !!(S.draft.regFields && S.draft.regFields[id]); }
+function captureRegDraft(ids){
+  if(!S.draft.regFields) S.draft.regFields={};
+  ids.forEach(id=>{
+    const el = document.getElementById(id);
+    if(!el) return;
+    S.draft.regFields[id] = el.type==='checkbox' ? el.checked : el.value;
+  });
+}
+function fieldCls(id){ return (S.draft.fieldErrs && S.draft.fieldErrs[id]) ? 'field-error' : ''; }
+function isValidEmail(v){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v); }
+function toggleRegWorkDay(key){
+  if(!S.draft.regWH) initRegWorkHours();
+  S.draft.regWH[key].enabled = !S.draft.regWH[key].enabled;
+  render();
+}
+function initRegWorkHours(){
+  S.draft.regWH = {};
+  APP_DAYS.forEach(d=> S.draft.regWH[d.key] = {enabled:false, start:'10:00', end:'18:00', slotMinutes:30});
+}
+function updateRegWorkField(key,field,val){
+  if(!S.draft.regWH) initRegWorkHours();
+  S.draft.regWH[key][field] = field==='slotMinutes' ? Number(val) : val;
+}
+
+const DOCTOR_POLICY_TEXT = `أقر أنا الموقّع أدناه (الطبيب/مقدّم الخدمة) بأن جميع البيانات والمعلومات التي أدخلتها عبر تطبيق "دوكتورك" — ومنها على سبيل المثال لا الحصر: الاسم الكامل، التخصص الطبي، الدرجة العلمية، رقم كارنيه/ترخيص النقابة، الرقم القومي، تاريخ الميلاد، بيانات العيادة والعنوان، ومواعيد العمل والأسعار — هي بيانات صحيحة، دقيقة، حديثة، ومطابقة تمامًا للواقع وللمستندات الرسمية الخاصة بي.
+أتحمّل وحدي كامل المسؤولية القانونية والجنائية والمدنية عن أي بيانات غير صحيحة أو مضللة أو منتحلة أقدمها ضمن هذا الطلب، وأوافق على قيام إدارة التطبيق بالتحقق من هوية ومؤهلات ورخصة مزاولة المهنة الخاصة بي قبل اعتماد الحساب.
+أتفهّم أن تقديم بيانات كاذبة أو انتحال صفة أو استخدام رخصة/بطاقة نقابية لا تخصني يُعرّضني للمساءلة القانونية أمام الجهات المختصة، ويعطي إدارة التطبيق الحق في إيقاف أو حذف حسابي فورًا ونهائيًا دون إشعار مسبق وبدون أي مسؤولية على التطبيق أو القائمين عليه.
+كما أوافق على سياسة الخصوصية وشروط استخدام التطبيق، وعلى أن بيانات هويتي الشخصية (الرقم القومي وتاريخ الميلاد) تُستخدم فقط لأغراض التحقق الداخلي من قبل الإدارة، ولا تُعرض للعملاء أو لأي طرف ثالث.`;
+
+function registerForm(role, err, fieldErrs){
+  if(!S.draft.regFields) S.draft.regFields = {};
+  if(role==='patient'){
+    return `
+    <div class="card stack">
+      <div class="field"><label>الاسم بالكامل</label><input id="r_name" class="${fieldCls('r_name')}" value="${esc(rf('r_name'))}" placeholder="مثال: مروة أحمد"></div>
+      <div class="field"><label>رقم الهاتف</label><input id="r_phone" class="${fieldCls('r_phone')}" value="${esc(rf('r_phone'))}" placeholder="01xxxxxxxxx"></div>
+      <div class="field"><label>البريد الإلكتروني <span style="color:var(--danger);">*</span></label><input id="r_email" class="${fieldCls('r_email')}" value="${esc(rf('r_email'))}" placeholder="you@example.com"></div>
+      <div class="field"><label>كلمة المرور</label><input id="r_pw" class="${fieldCls('r_pw')}" type="password" value="${esc(rf('r_pw'))}"></div>
+      <div class="field" style="margin-bottom:0;"><label>تأكيد كلمة المرور</label><input id="r_pw2" class="${fieldCls('r_pw2')}" type="password" value="${esc(rf('r_pw2'))}"></div>
+    </div>
+    ${err?`<div class="err" style="display:block;margin-top:8px;">${esc(err)}</div>`:''}
+    <button class="btn btn-primary" style="margin-top:16px;" onclick="registerPatient()">تحقق وإنشاء الحساب</button>`;
+  }
+  if(!S.draft.regWH) initRegWorkHours();
+  const specOpts = DB.directory.specialties.map(s=>`<option value="${esc(s)}" ${rf('r_spec')===s?'selected':''}>${esc(s)}</option>`).join('');
+  const govOpts = DB.directory.governorates.map(g=>`<option value="${esc(g.name)}" ${rf('r_gov')===g.name?'selected':''}>${esc(g.name)}</option>`).join('');
+  const y = new Date().getFullYear();
+  const yearOpts = []; for(let yy=y-22;yy>=y-80;yy--) yearOpts.push(yy);
+  return `
+  <div class="card stack">
+    <div class="field"><label>الاسم بالكامل</label><input id="r_name" class="${fieldCls('r_name')}" value="${esc(rf('r_name'))}" placeholder="د. أحمد سامي"></div>
+    <div class="field"><label>رقم الهاتف</label><input id="r_phone" class="${fieldCls('r_phone')}" value="${esc(rf('r_phone'))}" placeholder="01xxxxxxxxx"></div>
+    <div class="field"><label>البريد الإلكتروني <span style="color:var(--danger);">*</span></label><input id="r_email" class="${fieldCls('r_email')}" value="${esc(rf('r_email'))}"></div>
+    <div class="grid2">
+      <div class="field"><label>كلمة المرور</label><input id="r_pw" class="${fieldCls('r_pw')}" type="password" value="${esc(rf('r_pw'))}"></div>
+      <div class="field"><label>تأكيد كلمة المرور</label><input id="r_pw2" class="${fieldCls('r_pw2')}" type="password" value="${esc(rf('r_pw2'))}"></div>
+    </div>
+    <div class="field"><label>التخصص</label><select id="r_spec">${specOpts}</select></div>
+    <div class="grid2">
+      <div class="field"><label>الدرجة العلمية</label><input id="r_degree" value="${esc(rf('r_degree'))}" placeholder="استشاري / أخصائي"></div>
+      <div class="field"><label>سنوات الخبرة</label><input id="r_exp" type="number" min="0" value="${esc(rf('r_exp'))}" placeholder="5"></div>
+    </div>
+    <div class="field"><label>نبذة مختصرة</label><textarea id="r_bio" rows="2" placeholder="نبذة عن الخبرة والتخصص">${esc(rf('r_bio'))}</textarea></div>
+    <div class="field"><label>رقم كارنيه/ترخيص النقابة</label><input id="r_license" class="${fieldCls('r_license')}" value="${esc(rf('r_license'))}" placeholder="رقم الترخيص"></div>
+  </div>
+  <div class="card stack" style="margin-top:12px;">
+    <div class="row" style="font-weight:700;">🏥 بيانات العيادة</div>
+    <div class="field"><label>اسم العيادة</label><input id="r_clinic" class="${fieldCls('r_clinic')}" value="${esc(rf('r_clinic'))}" placeholder="عيادة النور"></div>
+    <div class="grid2">
+      <div class="field"><label>المحافظة</label><select id="r_gov">${govOpts}</select></div>
+      <div class="field"><label>المدينة/المنطقة</label><input id="r_area" value="${esc(rf('r_area'))}" placeholder="مثال: مدينة نصر"></div>
+    </div>
+    <div class="field"><label>العنوان بالتفصيل</label><input id="r_addr" class="${fieldCls('r_addr')}" value="${esc(rf('r_addr'))}" placeholder="رقم العقار، الشارع، علامة مميزة"></div>
+    <div class="grid2">
+      <div class="field"><label>هاتف العيادة</label><input id="r_cphone" value="${esc(rf('r_cphone'))}" placeholder="0223xxxxxx"></div>
+      <div class="field" style="margin-bottom:0;"><label>سعر الكشف (جنيه)</label><input id="r_price" type="number" min="0" value="${esc(rf('r_price'))}" placeholder="300"></div>
+    </div>
+  </div>
+  <div class="card stack" style="margin-top:12px;">
+    <div class="row" style="font-weight:700;">🕒 مواعيد العمل</div>
+    <div class="tiny muted">حدد أيام وساعات استقبال الكشف في عيادتك — يمكنك تعديلها لاحقًا من حسابك بعد الاعتماد.</div>
+    ${APP_DAYS.map(d=>{
+      const cfg = S.draft.regWH[d.key];
+      return `<div class="card" style="padding:10px 12px;">
+        <div class="between">
+          <span style="font-weight:700;font-size:13.5px;">${d.label}</span>
+          <div class="switch ${cfg.enabled?'on':''}" onclick="toggleRegWorkDay('${d.key}')"><div class="knob"></div></div>
+        </div>
+        ${cfg.enabled?`<div class="grid2" style="margin-top:10px;">
+          <div class="field" style="margin-bottom:0;"><label class="tiny">من</label><input type="time" value="${cfg.start}" oninput="updateRegWorkField('${d.key}','start',this.value)"></div>
+          <div class="field" style="margin-bottom:0;"><label class="tiny">إلى</label><input type="time" value="${cfg.end}" oninput="updateRegWorkField('${d.key}','end',this.value)"></div>
+        </div>`:''}
+      </div>`;
+    }).join('')}
+  </div>
+  <div class="card stack" style="margin-top:12px;">
+    <div class="row" style="font-weight:700;">🪪 بيانات الهوية (سرّية — للإدارة فقط)</div>
+    <div class="field"><label>الرقم القومي</label><input id="r_nid" class="${fieldCls('r_nid')}" maxlength="14" inputmode="numeric" value="${esc(rf('r_nid'))}" placeholder="14 رقم"></div>
+    <div class="field" style="margin-bottom:0;">
+      <label>تاريخ الميلاد (إدخال يدوي)</label>
+      <div class="grid2" style="grid-template-columns:1fr 1fr 1.3fr;display:grid;gap:8px;">
+        <input id="r_dob_d" class="${fieldCls('r_dob')}" type="number" min="1" max="31" value="${esc(rf('r_dob_d'))}" placeholder="يوم">
+        <input id="r_dob_m" class="${fieldCls('r_dob')}" type="number" min="1" max="12" value="${esc(rf('r_dob_m'))}" placeholder="شهر">
+        <select id="r_dob_y" class="${fieldCls('r_dob')}">
+          <option value="">سنة</option>
+          ${yearOpts.map(yy=>`<option value="${yy}" ${String(rf('r_dob_y'))===String(yy)?'selected':''}>${yy}</option>`).join('')}
+        </select>
+      </div>
+    </div>
+    <div class="tiny muted">هذه البيانات تُستخدم فقط للتحقق من هويتك من قبل الإدارة قبل قبول حسابك، ولا تظهر للعملاء.</div>
+  </div>
+  <div class="card stack" style="margin-top:12px;background:var(--primary-tint);border-color:var(--primary);">
+    <div style="font-weight:700;">إقرار وتعهد قانوني</div>
+    <div class="small" style="line-height:1.75;max-height:190px;overflow-y:auto;white-space:pre-line;">${esc(DOCTOR_POLICY_TEXT)}</div>
+    <label class="row" style="cursor:pointer;align-items:flex-start;">
+      <input type="checkbox" id="r_policy" ${rfChecked('r_policy')?'checked':''} style="width:auto;margin-top:3px;" onchange="S.draft.regFields.r_policy=this.checked;document.getElementById('submitDoctorBtn').disabled=!this.checked">
+      <span class="small" style="font-weight:700;">أوافق على الإقرار أعلاه وأتحمل مسؤوليته القانونية كاملة</span>
+    </label>
+  </div>
+  ${err?`<div class="err" style="display:block;margin-top:8px;">${esc(err)}</div>`:''}
+  <button id="submitDoctorBtn" class="btn btn-primary" style="margin-top:16px;" onclick="registerDoctor()" ${rfChecked('r_policy')?'':'disabled'}>تحقق وإرسال الطلب للمراجعة</button>`;
+}
+
+const PATIENT_REQUIRED_FIELDS = ['r_name','r_phone','r_email','r_pw','r_pw2'];
+function registerPatient(){
+  captureRegDraft(PATIENT_REQUIRED_FIELDS);
+  const f = S.draft.regFields;
+  const name=(f.r_name||'').trim(), phone=(f.r_phone||'').trim(), email=(f.r_email||'').trim(), pw=f.r_pw||'', pw2=f.r_pw2||'';
+  const errs = {};
+  if(!name) errs.r_name=1;
+  if(!phone || !validPhone(phone)) errs.r_phone=1;
+  if(!email || !isValidEmail(email)) errs.r_email=1;
+  if(!pw) errs.r_pw=1;
+  if(!pw2 || pw!==pw2) errs.r_pw2=1;
+  if(Object.keys(errs).length){
+    S.draft.fieldErrs = errs;
+    S.draft.authErr = !name||!phone||!pw||!pw2 ? 'من فضلك أكمل الحقول المطلوبة (الموضحة بالأحمر)'
+      : (!validPhone(phone) ? 'رقم الهاتف غير صحيح (11 رقم يبدأ بـ 010/011/012/015)'
+      : (!isValidEmail(email) ? 'البريد الإلكتروني مطلوب وبصيغة صحيحة'
+      : 'كلمة المرور غير متطابقة'));
+    render(); return;
+  }
+  if(Object.values(DB.patients).some(p=>p.phone===phone)){ S.draft.fieldErrs={r_phone:1}; S.draft.authErr='رقم الهاتف مستخدم بالفعل'; render(); return; }
+  if(Object.values(DB.patients).some(p=>p.email===email)){ S.draft.fieldErrs={r_email:1}; S.draft.authErr='البريد الإلكتروني مستخدم بالفعل'; render(); return; }
+  const id = uid('PT');
+  DB.patients[id] = {id,name,phone,email,passwordHash:simpleHash(pw),status:'pending',createdAt:Date.now()};
+  saveKey('patients');
+  S.draft={}; S.role='patient'; S.session=id;
+  persistSession();
+  go('patient-pending');
+}
+
+const DOCTOR_REQUIRED_FIELDS = ['r_name','r_phone','r_email','r_pw','r_pw2','r_degree','r_exp','r_bio','r_license','r_clinic','r_area','r_addr','r_cphone','r_price','r_nid','r_dob_d','r_dob_m','r_dob_y'];
+function registerDoctor(){
+  captureRegDraft(DOCTOR_REQUIRED_FIELDS);
+  const f = S.draft.regFields;
+  const name=(f.r_name||'').trim(), phone=(f.r_phone||'').trim(), email=(f.r_email||'').trim();
+  const pw=f.r_pw||'', pw2=f.r_pw2||'';
+  const spec=document.getElementById('r_spec').value;
+  const degree=(f.r_degree||'').trim(), exp=Number(f.r_exp||0), bio=(f.r_bio||'').trim(), license=(f.r_license||'').trim();
+  const clinic=(f.r_clinic||'').trim();
+  const gov=document.getElementById('r_gov').value;
+  const area=(f.r_area||'').trim(), addr=(f.r_addr||'').trim(), cphone=(f.r_cphone||'').trim(), price=Number(f.r_price||0);
+  const nid=(f.r_nid||'').trim();
+  const dd=Number(f.r_dob_d||0), mm=Number(f.r_dob_m||0), yy=Number(f.r_dob_y||0);
+  const policyAccepted=!!f.r_policy;
+
+  const errs = {};
+  if(!name) errs.r_name=1;
+  if(!phone || !validPhone(phone)) errs.r_phone=1;
+  if(!email || !isValidEmail(email)) errs.r_email=1;
+  if(!pw) errs.r_pw=1;
+  if(!pw2 || pw!==pw2) errs.r_pw2=1;
+  if(!license) errs.r_license=1;
+  if(!clinic) errs.r_clinic=1;
+  if(!addr) errs.r_addr=1;
+  if(!/^\d{14}$/.test(nid)) errs.r_nid=1;
+  const dobValid = dd>=1&&dd<=31&&mm>=1&&mm<=12&&yy>1900;
+  if(!dobValid) errs.r_dob=1;
+  if(Object.keys(errs).length){
+    S.draft.fieldErrs = errs;
+    S.draft.authErr = 'من فضلك راجع الحقول المحددة بالأحمر وأكملها بشكل صحيح';
+    render(); return;
+  }
+  if(!policyAccepted){ S.draft.authErr='يجب الموافقة على الإقرار قبل إرسال الطلب'; render(); return; }
+  if(Object.values(DB.doctors).some(d=>d.phone===phone)){ S.draft.fieldErrs={r_phone:1}; S.draft.authErr='رقم الهاتف مستخدم بالفعل'; render(); return; }
+  if(Object.values(DB.doctors).some(d=>d.email===email)){ S.draft.fieldErrs={r_email:1}; S.draft.authErr='البريد الإلكتروني مستخدم بالفعل'; render(); return; }
+  const dob = `${yy}-${String(mm).padStart(2,'0')}-${String(dd).padStart(2,'0')}`;
+  const id = uid('DR');
+  const workingHours = S.draft.regWH || {};
+  APP_DAYS.forEach(d=>{ if(!workingHours[d.key]) workingHours[d.key]={enabled:false,start:'10:00',end:'18:00',slotMinutes:30}; });
+  DB.doctors[id] = {
+    id,name,phone,email,passwordHash:simpleHash(pw),specialty:spec,degree,experience:exp,bio,license,
+    clinicName:clinic,governorate:gov,area,address:addr,clinicPhone:cphone,price,
+    nationalId:nid, birthDate:dob, policyAccepted:true, policyAcceptedAt:Date.now(),
+    status:'pending', rating:0, ratingCount:0, workingHours, createdAt:Date.now(), pendingSensitive:null
+  };
+  saveKey('doctors');
+  S.draft={}; S.role='doctor'; S.session=id;
+  persistSession();
+  go('doctor-pending');
+}
+
+function screenPendingStatus(role){
+  const table = role==='patient'?DB.patients:DB.doctors;
+  const user = table[S.session];
+  if(!user) return screenWelcome();
+  let icon='⏳', title='طلبك قيد المراجعة', desc='سيتم إشعارك فور مراجعة الإدارة لحسابك.';
+  if(user.status==='rejected'){ icon='✖️'; title='تم رفض الطلب'; desc='تواصل مع الإدارة لمزيد من التفاصيل.'; }
+  if(user.status==='suspended'){ icon='⛔'; title='الحساب موقوف'; desc='هذا الحساب موقوف حاليًا من قبل الإدارة.'; }
+  return { topbar:true, nav:false,
+    topbarHTML: topbarHTML('حالة الحساب', {onBack:"logout()"}),
+    html:`
+    <div class="card" style="text-align:center;padding:40px 20px;margin-top:20px;">
+      <div style="font-size:44px;margin-bottom:14px;">${icon}</div>
+      <h3 style="margin-bottom:8px;">${title}</h3>
+      <div class="muted small">${desc}</div>
+    </div>
+    <button class="btn btn-outline" style="margin-top:18px;" onclick="logout()">تسجيل الخروج</button>
+  `};
+}
+function logout(){ S.role=null; S.session=null; S.screen='welcome'; S.params={}; S.draft={}; persistSession(); render(); }
+
+/* ============================= مسار العميل ============================= */
+function patientNav(){
+  return navBtn('الرئيسية','🏠','patient-home',['patient-home','doctor-view'])
+       + navBtn('حجوزاتي','📅','patient-bookings',['patient-bookings'])
+       + navBtn('الرسائل','💬','patient-messages',['patient-messages'])
+       + navBtn('حسابي','👤','patient-account',['patient-account','patient-notifications','patient-reviews']);
+}
+function patientRouter(){
+  const p = DB.patients[S.session];
+  if(!p) { logout(); return screenWelcome(); }
+  if(p.status!=='approved') return screenPendingStatus('patient');
+  switch(S.screen){
+    case 'patient-home': return screenPatientHome(p);
+    case 'doctor-view': return screenDoctorView(p);
+    case 'patient-bookings': return screenPatientBookings(p);
+    case 'patient-messages': return screenChat('patient', p.id, 'الرسائل مع الإدارة');
+    case 'patient-account': return screenPatientAccount(p);
+    case 'patient-notifications': return screenNotifications(p.id, 'patient-account');
+    case 'patient-reviews': return screenMyReviews(p);
+    case 'patient-edit': return screenPatientEdit(p);
+    default: S.screen='patient-home'; return screenPatientHome(p);
+  }
+}
+
+function screenPatientHome(p){
+  const q = (S.draft.q||'').trim().toLowerCase();
+  const spec = S.draft.filterSpec || '';
+  const gov = S.draft.filterGov || '';
+  const sort = S.draft.sort || 'soon';
+  let list = approvedDoctors();
+  if(q) list = list.filter(d=> d.name.toLowerCase().includes(q) || d.specialty.toLowerCase().includes(q));
+  if(spec) list = list.filter(d=>d.specialty===spec);
+  if(gov) list = list.filter(d=>d.governorate===gov);
+  const withNext = list.map(d=>({d, next:nextAvailable(d)}));
+  if(sort==='rating') withNext.sort((a,b)=>b.d.rating-a.d.rating);
+  else if(sort==='price') withNext.sort((a,b)=>a.d.price-b.d.price);
+  else withNext.sort((a,b)=>{
+    const at = a.next? new Date(a.next.date+'T'+a.next.time).getTime(): Infinity;
+    const bt = b.next? new Date(b.next.date+'T'+b.next.time).getTime(): Infinity;
+    return at-bt;
+  });
+  const featured = approvedDoctors().filter(d=>d.rating>=4.5).sort((a,b)=>b.rating-a.rating).slice(0,6);
+  const unreviewed = DB.appointments.filter(a=>a.patientId===p.id && a.status==='done' && !DB.reviews.some(r=>r.appointmentId===a.id));
+
+  const specChips = ['الكل',...DB.directory.specialties].map(s=>{
+    const val = s==='الكل'?'':s;
+    const active = (val===spec);
+    return `<div class="chip ${active?'active':''}" onclick="S.draft.filterSpec='${esc(val)}';render()">${esc(s)}</div>`;
+  }).join('');
+  const govOpts = ['<option value="">كل المحافظات</option>',...DB.directory.governorates.map(g=>`<option value="${esc(g.name)}" ${gov===g.name?'selected':''}>${esc(g.name)}</option>`)].join('');
+
+  return { topbar:true, nav:true, navHTML:patientNav(),
+    topbarHTML: topbarHTML('دوكتورك', {sub:'أهلًا '+p.name.split(' ')[0], showBack:false, right:avatarHTML(p.name,p.id,34)}),
+    html:`
+    ${renderAdsHTML()}
+    ${unreviewed.length? `<div class="card" style="margin-bottom:14px;background:var(--accent-tint);border-color:var(--accent);">
+      <div class="row"><span style="font-size:20px;">⭐</span><div style="flex:1;"><b>عندك كشف سابق يستحق تقييم!</b><div class="small muted">قيّم تجربتك مع الطبيب لمساعدة عملاء آخرين</div></div></div>
+      <button class="btn btn-primary btn-sm" style="margin-top:10px;" onclick="go('doctor-review',{apptId:'${unreviewed[0].id}'})">قيّم الآن</button>
+    </div>`:''}
+    <div class="field">
+      <input placeholder="ابحث باسم الدكتور أو التخصص" value="${esc(S.draft.q||'')}" oninput="S.draft.q=this.value;render()">
+    </div>
+    <div class="chiprow" style="margin-bottom:12px;">${specChips}</div>
+    <div class="row" style="margin-bottom:16px;gap:8px;">
+      <select style="flex:1;" onchange="S.draft.filterGov=this.value;render()">${govOpts}</select>
+      <select style="flex:1;" onchange="S.draft.sort=this.value;render()">
+        <option value="soon" ${sort==='soon'?'selected':''}>الأقرب موعدًا</option>
+        <option value="rating" ${sort==='rating'?'selected':''}>الأعلى تقييمًا</option>
+        <option value="price" ${sort==='price'?'selected':''}>الأقل سعرًا</option>
+      </select>
+    </div>
+
+    ${featured.length && !q && !spec && !gov ? `
+    <div class="between" style="margin-bottom:10px;"><h3 style="font-size:15px;">⭐ أطباء مميزون</h3></div>
+    <div class="chiprow" style="gap:10px;margin-bottom:20px;">
+      ${featured.map(d=>`
+        <div class="card" style="min-width:150px;text-align:center;cursor:pointer;" onclick="go('doctor-view',{doctorId:'${d.id}'})">
+          ${avatarHTML(d.name,d.id,50,d.photo)}
+          <div style="font-weight:700;font-size:13px;margin-top:8px;">${esc(d.name)}</div>
+          <div class="tiny muted">${esc(d.specialty)}</div>
+          <div style="margin-top:4px;">${starsHTML(d.rating,d.ratingCount)}</div>
+        </div>`).join('')}
+    </div>`:''}
+
+    <div class="between" style="margin-bottom:10px;"><h3 style="font-size:15px;">الأطباء المتاحون للحجز</h3><span class="tiny muted">${withNext.length} طبيب</span></div>
+    <div class="stack">
+      ${withNext.length===0? `<div class="empty"><div class="ic">🔍</div>لا يوجد أطباء مطابقون لبحثك</div>` :
+      withNext.map(({d,next})=>doctorCard(d,next)).join('')}
+    </div>
+  `};
+}
+function doctorCard(d,next){
+  return `<div class="card" style="cursor:pointer;" onclick="go('doctor-view',{doctorId:'${d.id}'})">
+    <div class="row" style="align-items:flex-start;">
+      ${avatarHTML(d.name,d.id,54,d.photo)}
+      <div style="flex:1;">
+        <div class="between"><div style="font-weight:700;font-size:15px;">${esc(d.name)}</div><div style="font-weight:700;color:var(--primary-dark);font-size:14px;">${d.price} ج.م</div></div>
+        <div class="small muted">${esc(d.specialty)} · خبرة ${d.experience} سنة</div>
+        <div style="margin-top:5px;">${starsHTML(d.rating,d.ratingCount)}</div>
+        <div class="small muted" style="margin-top:5px;">📍 ${esc(d.governorate)} - ${esc(d.area)}</div>
+        <div class="small" style="margin-top:6px;color:${next?'var(--success)':'var(--text-muted)'};font-weight:700;">
+          ${next? '🟢 أقرب موعد: '+fmtDate(next.date)+' - '+next.time : 'لا توجد مواعيد متاحة حاليًا'}
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function screenDoctorView(p){
+  const d = DB.doctors[S.params.doctorId];
+  if(!d) { go('patient-home'); return screenPatientHome(p); }
+  const selDate = S.draft.selDate || todayStr(0);
+  const days = [];
+  for(let i=0;i<14;i++){
+    const ds = todayStr(i);
+    const slots = slotsForDoctorOnDate(d,ds);
+    if(slots.length===0) continue;
+    days.push(ds);
+    if(days.length>=8) break;
+  }
+  if(!days.includes(selDate) && days.length) S.draft.selDate = days[0];
+  const activeDate = S.draft.selDate || (days[0]||selDate);
+  const slots = slotsForDoctorOnDate(d, activeDate);
+  const reviews = DB.reviews.filter(r=>r.doctorId===d.id && r.approved).slice(0,5);
+
+  return { topbar:true, nav:true, navHTML:patientNav(),
+    topbarHTML: topbarHTML('ملف الطبيب', {onBack:"go('patient-home')"}),
+    html:`
+    <div class="card" style="padding:0;overflow:hidden;">
+      <div style="background:linear-gradient(135deg,var(--primary),var(--primary-dark));padding:22px 18px;color:#fff;">
+        <div class="row" style="align-items:flex-start;">
+          ${d.photo?`<div class="avatar" style="width:64px;height:64px;padding:0;overflow:hidden;border:2px solid rgba(255,255,255,.5);"><img src="${d.photo}" style="width:100%;height:100%;object-fit:cover;display:block;"></div>`:`<div class="avatar" style="width:64px;height:64px;background:rgba(255,255,255,.22);font-size:26px;border:2px solid rgba(255,255,255,.5);">${esc((d.name||'?').trim().charAt(0))}</div>`}
+          <div style="flex:1;">
+            <div style="font-weight:800;font-size:18px;">${esc(d.name)}</div>
+            <div class="small" style="opacity:.92;">${esc(d.degree)} · ${esc(d.specialty)}</div>
+            <div style="margin-top:6px;">${starsHTML(d.rating,d.ratingCount)}</div>
+          </div>
+        </div>
+      </div>
+      <div style="padding:16px 18px;">
+        ${d.bio?`<div class="small" style="margin-bottom:12px;line-height:1.7;">${esc(d.bio)}</div>`:''}
+        <div class="row small" style="margin-bottom:8px;"><span>🏥</span><span style="font-weight:600;">${esc(d.clinicName)}</span></div>
+        <div class="row small muted" style="margin-bottom:8px;"><span>📍</span><span>${esc(d.governorate)}، ${esc(d.area)} — ${esc(d.address)}</span></div>
+        <div class="between" style="background:var(--primary-tint);border-radius:var(--radius-md);padding:12px 14px;margin-top:10px;">
+          <span style="font-weight:700;">💵 سعر الكشف</span>
+          <span style="font-weight:800;font-size:19px;color:var(--primary-dark);">${d.price} <span style="font-size:13px;">جنيه</span></span>
+        </div>
+        <a class="btn btn-outline" style="margin-top:12px;display:block;text-align:center;text-decoration:none;" href="${mapsLink(d.governorate+' '+d.area+' '+d.address)}" target="_blank" rel="noopener">📍 فتح الموقع على الخريطة</a>
+      </div>
+    </div>
+
+    <h3 style="font-size:15px;margin:18px 0 10px;">اختر اليوم</h3>
+    <div class="chiprow" style="gap:8px;margin-bottom:14px;">
+      ${days.map(ds=>{
+        const dt = new Date(ds+'T00:00:00');
+        const wd = APP_DAYS.find(x=>x.jsDay===dt.getDay());
+        return `<div class="daybtn ${ds===activeDate?'sel':''}" onclick="S.draft.selDate='${ds}';S.draft.selTime=null;render()">
+          <div class="dlabel">${wd.label}</div><div class="dnum">${dt.getDate()}</div>
+        </div>`;
+      }).join('') || '<div class="muted small">لا توجد مواعيد متاحة قريبًا</div>'}
+    </div>
+
+    ${days.length? `
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">
+      ${slots.map(t=>{
+        const taken = isSlotTaken(d.id,activeDate,t);
+        const sel = S.draft.selTime===t;
+        return `<div class="slotbtn ${taken?'taken':''} ${sel?'sel':''}" ${taken?'':`onclick="S.draft.selTime='${t}';render()"`}>${t}</div>`;
+      }).join('')}
+    </div>` : ''}
+
+    ${S.draft.selTime? `
+    <div class="card" style="margin-top:16px;">
+      <div style="font-weight:700;margin-bottom:8px;">ملخص الحجز</div>
+      <div class="small muted">الطبيب: ${esc(d.name)}</div>
+      <div class="small muted">التخصص: ${esc(d.specialty)}</div>
+      <div class="small muted">العيادة: ${esc(d.clinicName)}</div>
+      <div class="small muted">التاريخ: ${fmtDate(activeDate)}</div>
+      <div class="small muted">الساعة: ${S.draft.selTime}</div>
+      <div class="small muted">السعر: ${d.price} جنيه</div>
+      <button class="btn btn-primary" style="margin-top:12px;" onclick="confirmBooking('${d.id}','${activeDate}')">تأكيد الحجز</button>
+    </div>` : ''}
+
+    <h3 style="font-size:15px;margin:20px 0 10px;">التقييمات</h3>
+    <div class="stack">
+      ${reviews.length===0? `<div class="muted small">لا توجد تقييمات بعد</div>` :
+        reviews.map(r=>{
+          const pat = DB.patients[r.patientId];
+          return `<div class="card">
+            <div class="between"><div style="font-weight:700;font-size:13px;">${esc(pat?pat.name:'عميل')}</div>${starsHTML(r.stars,0)}</div>
+            ${r.comment?`<div class="small muted" style="margin-top:6px;">${esc(r.comment)}</div>`:''}
+          </div>`;
+        }).join('')}
+    </div>
+  `};
+}
+function confirmBooking(doctorId, dateStr){
+  const time = S.draft.selTime;
+  const res = bookAppointment(doctorId, dateStr, time);
+  if(!res.ok){ showToast(res.msg); render(); return; }
+  S.draft.selTime=null;
+  go('patient-bookings');
+  showToast('تم حجز موعدك بنجاح — رقم الحجز '+res.appt.id);
+}
+
+function screenPatientBookings(p){
+  const tab = S.draft.bTab || 'upcoming';
+  const my = DB.appointments.filter(a=>a.patientId===p.id).sort((a,b)=> (a.date+a.time)<(b.date+b.time)?1:-1);
+  const now = Date.now();
+  const isUpcoming = a=> a.status!=='cancelled' && new Date(a.date+'T'+a.time).getTime()>=now && a.status!=='done';
+  const isPast = a=> a.status==='done' || (a.status!=='cancelled' && new Date(a.date+'T'+a.time).getTime()<now);
+  const isCancelled = a=> a.status==='cancelled';
+  let list = tab==='upcoming'? my.filter(isUpcoming) : tab==='past'? my.filter(isPast) : my.filter(isCancelled);
+  list = list.sort((a,b)=> tab==='upcoming' ? ((a.date+a.time)<(b.date+b.time)?-1:1) : ((a.date+a.time)<(b.date+b.time)?1:-1));
+
+  return { topbar:true, nav:true, navHTML:patientNav(),
+    topbarHTML: topbarHTML('حجوزاتي', {showBack:false}),
+    html:`
+    <div class="tabs" style="margin-bottom:16px;">
+      <div class="tab ${tab==='upcoming'?'active':''}" onclick="S.draft.bTab='upcoming';render()">القادمة</div>
+      <div class="tab ${tab==='past'?'active':''}" onclick="S.draft.bTab='past';render()">السابقة</div>
+      <div class="tab ${tab==='cancelled'?'active':''}" onclick="S.draft.bTab='cancelled';render()">الملغاة</div>
+    </div>
+    <div class="stack">
+      ${list.length===0? `<div class="empty"><div class="ic">📅</div>لا توجد حجوزات هنا</div>` :
+      list.map(a=>bookingCard(a,tab)).join('')}
+    </div>
+  `};
+}
+function bookingCard(a,tab){
+  const d = DB.doctors[a.doctorId];
+  const hasReview = DB.reviews.some(r=>r.appointmentId===a.id);
+  return `<div class="card">
+    <div class="row" style="align-items:flex-start;">
+      ${avatarHTML(d?d.name:'?',a.doctorId,46,d?d.photo:null)}
+      <div style="flex:1;">
+        <div class="between"><div style="font-weight:700;">${esc(d?d.name:'طبيب محذوف')}</div><span class="pill pill-${APPT_COLORS[a.status]}">${APPT_LABELS[a.status]}</span></div>
+        <div class="small muted">${d?esc(d.specialty):''} · ${esc(d?d.clinicName:'')}</div>
+        <div class="small muted" style="margin-top:4px;">📅 ${fmtDate(a.date)} — ⏰ ${a.time}</div>
+        <div class="tiny muted" style="margin-top:2px;">رقم الحجز: ${a.id}</div>
+      </div>
+    </div>
+    ${tab==='upcoming' && a.status!=='cancelled' ? `<button class="btn btn-danger-outline btn-sm" style="margin-top:10px;" onclick="doCancelAppt('${a.id}')">إلغاء الحجز</button>`:''}
+    ${tab==='past' && a.status==='done' && !hasReview ? `<button class="btn btn-outline btn-sm" style="margin-top:10px;" onclick="go('doctor-review',{apptId:'${a.id}'})" >⭐ قيّم الطبيب</button>`:''}
+  </div>`;
+}
+function doCancelAppt(id){
+  const res = cancelAppointment(id,'patient');
+  if(!res.ok){ showToast(res.msg); } else { showToast('تم إلغاء الحجز'); }
+  render();
+}
+
+function screenPatientAccount(p){
+  const unread = (DB.notifications[p.id]||[]).filter(n=>!n.read).length;
+  return { topbar:true, nav:true, navHTML:patientNav(),
+    topbarHTML: topbarHTML('حسابي', {showBack:false}),
+    html:`
+    <div class="card row" style="margin-bottom:16px;">
+      ${avatarHTML(p.name,p.id,56)}
+      <div><div style="font-weight:700;font-size:16px;">${esc(p.name)}</div><div class="small muted">${esc(p.phone)}</div></div>
+    </div>
+    <div class="stack">
+      ${accountRow('✏️','تعديل البيانات', "go('patient-edit')")}
+      ${accountRow('🔔','الإشعارات', "go('patient-notifications')", unread?unread:null)}
+      ${accountRow('⭐','تقييماتي', "go('patient-reviews')")}
+      ${accountRow('💬','الرسائل (تواصل مع الإدارة)', "go('patient-messages')")}
+    </div>
+    <button class="btn btn-danger-outline" style="margin-top:22px;" onclick="logout()">تسجيل الخروج</button>
+  `};
+}
+function accountRow(icon,label,onclick,badge){
+  return `<div class="card between" style="cursor:pointer;" onclick="${onclick}">
+    <div class="row"><span style="font-size:18px;">${icon}</span><span style="font-weight:600;">${esc(label)}</span></div>
+    <div class="row">${badge?`<span class="pill pill-danger">${badge}</span>`:''}<span class="muted">‹</span></div>
+  </div>`;
+}
+function screenPatientEdit(p){
+  return { topbar:true, nav:false,
+    topbarHTML: topbarHTML('تعديل البيانات', {onBack:"go('patient-account')"}),
+    html:`
+    <div class="card stack">
+      <div class="field"><label>الاسم</label><input id="e_name" value="${esc(p.name)}"></div>
+      <div class="field"><label>البريد الإلكتروني</label><input id="e_email" value="${esc(p.email||'')}"></div>
+      <div class="field" style="margin-bottom:0;"><label>رقم الهاتف</label><input value="${esc(p.phone)}" disabled></div>
+    </div>
+    <div class="card stack" style="margin-top:12px;">
+      <div style="font-weight:700;">تغيير كلمة المرور</div>
+      <div class="field"><label>كلمة المرور الجديدة (اتركها فارغة لعدم التغيير)</label><input id="e_pw" type="password"></div>
+    </div>
+    <button class="btn btn-primary" style="margin-top:16px;" onclick="savePatientEdit()">حفظ التعديلات</button>
+  `};
+}
+function savePatientEdit(){
+  const p = DB.patients[S.session];
+  p.name = document.getElementById('e_name').value.trim() || p.name;
+  p.email = document.getElementById('e_email').value.trim();
+  const pw = document.getElementById('e_pw').value;
+  if(pw) p.passwordHash = simpleHash(pw);
+  saveKey('patients');
+  showToast('تم حفظ التعديلات');
+  go('patient-account');
+}
+function screenMyReviews(p){
+  const my = DB.reviews.filter(r=>r.patientId===p.id).sort((a,b)=>b.createdAt-a.createdAt);
+  return { topbar:true, nav:true, navHTML:patientNav(),
+    topbarHTML: topbarHTML('تقييماتي', {onBack:"go('patient-account')"}),
+    html:`<div class="stack">
+      ${my.length===0?`<div class="empty"><div class="ic">⭐</div>لم تقيّم أي طبيب بعد</div>`:
+      my.map(r=>{
+        const d = DB.doctors[r.doctorId];
+        return `<div class="card">
+          <div class="between"><div style="font-weight:700;">${esc(d?d.name:'')}</div>${starsHTML(r.stars,0)}</div>
+          ${r.comment?`<div class="small muted" style="margin-top:6px;">${esc(r.comment)}</div>`:''}
+          <div class="tiny muted" style="margin-top:6px;">${r.approved?'منشور':'قيد المراجعة من الإدارة'}</div>
+        </div>`;
+      }).join('')}
+    </div>`
+  };
+}
+function screenNotifications(userId, back){
+  const list = (DB.notifications[userId]||[]);
+  list.forEach(n=>n.read=true);
+  saveKey('notifications');
+  return { topbar:true, nav: S.role!=='admin', navHTML: S.role==='patient'?patientNav(): S.role==='doctor'?doctorNav():'',
+    topbarHTML: topbarHTML('الإشعارات', {onBack:`go('${back}')`}),
+    html:`<div class="stack">
+      ${list.length===0?`<div class="empty"><div class="ic">🔔</div>لا توجد إشعارات</div>`:
+      list.map(n=>`<div class="card"><div class="small">${esc(n.text)}</div><div class="tiny muted" style="margin-top:5px;">${new Date(n.time).toLocaleString('ar-EG')}</div></div>`).join('')}
+    </div>`
+  };
+}
+
+/* تقييم بعد الكشف */
+function buildDoctorReviewScreen(){
+  const a = DB.appointments.find(x=>x.id===S.params.apptId);
+  if(!a) { go('patient-bookings'); return screenPatientBookings(DB.patients[S.session]); }
+  const d = DB.doctors[a.doctorId];
+  const stars = S.draft.reviewStars||0;
+  return { topbar:true, nav:false,
+    topbarHTML: topbarHTML('تقييم الطبيب', {onBack:"go('patient-bookings')"}),
+    html:`
+    <div class="card" style="text-align:center;">
+      ${avatarHTML(d.name,d.id,60,d.photo)}
+      <div style="font-weight:700;margin-top:8px;">${esc(d.name)}</div>
+      <div class="small muted">${esc(d.specialty)}</div>
+      <div style="margin:16px 0;font-size:30px;">
+        ${[1,2,3,4,5].map(i=>`<span style="cursor:pointer;" class="star ${i<=stars?'on':''}" onclick="S.draft.reviewStars=${i};render()">★</span>`).join('')}
+      </div>
+      <textarea id="rv_comment" rows="3" placeholder="اكتب تعليقك (اختياري)"></textarea>
+      <button class="btn btn-primary" style="margin-top:14px;" ${stars?'':'disabled'} onclick="submitReview('${a.id}')">إرسال التقييم</button>
+    </div>`
+  };
+}
+function submitReview(apptId){
+  const a = DB.appointments.find(x=>x.id===apptId);
+  const stars = S.draft.reviewStars;
+  const comment = document.getElementById('rv_comment').value.trim();
+  DB.reviews.push({id:uid('RV'),doctorId:a.doctorId,patientId:a.patientId,appointmentId:a.id,stars,comment,approved:false,createdAt:Date.now()});
+  saveKey('reviews');
+  S.draft.reviewStars=0;
+  showToast('شكرًا لك، سيظهر تقييمك بعد مراجعة الإدارة');
+  go('patient-bookings');
+}
+
+/* ============================= مسار الدكتور ============================= */
+function doctorNav(){
+  return navBtn('لوحتي','📊','doctor-dashboard',['doctor-dashboard'])
+       + navBtn('الجدول','🗓️','doctor-schedule',['doctor-schedule'])
+       + navBtn('ملفي','🩺','doctor-profile',['doctor-profile'])
+       + navBtn('الرسائل','💬','doctor-messages',['doctor-messages']);
+}
+function doctorRouter(){
+  const d = DB.doctors[S.session];
+  if(!d){ logout(); return screenWelcome(); }
+  if(d.status!=='approved') return screenPendingStatus('doctor');
+  switch(S.screen){
+    case 'doctor-dashboard': return screenDoctorDashboard(d);
+    case 'doctor-schedule': return screenDoctorSchedule(d);
+    case 'doctor-profile': return screenDoctorProfile(d);
+    case 'doctor-messages': return screenChat('doctor', d.id, 'الرسائل مع الإدارة');
+    case 'doctor-notifications': return screenNotifications(d.id,'doctor-dashboard');
+    default: S.screen='doctor-dashboard'; return screenDoctorDashboard(d);
+  }
+}
+function screenDoctorDashboard(d){
+  const my = DB.appointments.filter(a=>a.doctorId===d.id && a.status!=='pending_admin');
+  const today = todayStr(0);
+  const todays = my.filter(a=>a.date===today && a.status!=='cancelled').sort((a,b)=>a.time<b.time?-1:1);
+  const upcoming = my.filter(a=> a.status!=='cancelled' && a.status!=='done' && a.date>today).length;
+  const past = my.filter(a=>a.status==='done').length;
+  const unread = (DB.notifications[d.id]||[]).filter(n=>!n.read).length;
+
+  return { topbar:true, nav:true, navHTML:doctorNav(),
+    topbarHTML: topbarHTML('لوحة الدكتور', {sub:'د. '+d.name, showBack:false, right:`<div style="position:relative;cursor:pointer;" onclick="go('doctor-notifications')">🔔${unread?`<span style="position:absolute;top:-4px;left:-6px;background:var(--danger);color:#fff;border-radius:99px;font-size:9px;padding:1px 5px;">${unread}</span>`:''}</div>`}),
+    html:`
+    ${renderAdsHTML()}
+    <div class="grid2" style="margin-bottom:16px;">
+      ${statCard('حجوزات اليوم', todays.length, '📅')}
+      ${statCard('القادمة', upcoming, '⏳')}
+      ${statCard('السابقة', past, '✅')}
+      ${statCard('التقييم', d.rating? d.rating.toFixed(1)+' ★':'—', '⭐')}
+    </div>
+    <h3 style="font-size:15px;margin-bottom:10px;">حجوزات اليوم</h3>
+    <div class="stack">
+      ${todays.length===0? `<div class="empty"><div class="ic">🗓️</div>لا توجد حجوزات اليوم</div>`:
+      todays.map(a=>{
+        const p = DB.patients[a.patientId];
+        return `<div class="card">
+          <div class="row" style="align-items:flex-start;">
+            ${avatarHTML(p?p.name:'?',a.patientId,44)}
+            <div style="flex:1;">
+              <div class="between"><div style="font-weight:700;">${esc(p?p.name:'عميل')}</div><span class="pill pill-${APPT_COLORS[a.status]}">${APPT_LABELS[a.status]}</span></div>
+              <div class="small muted">⏰ ${a.time} · رقم الحجز ${a.id}</div>
+            </div>
+          </div>
+          <select style="margin-top:10px;" onchange="doctorSetStatus('${a.id}',this.value)">
+            <option value="">تغيير الحالة</option>
+            <option value="confirmed">مؤكد</option>
+            <option value="attended">حضر العميل</option>
+            <option value="noshow">لم يحضر</option>
+            <option value="done">تم الكشف</option>
+            <option value="cancelled">إلغاء</option>
+          </select>
+        </div>`;
+      }).join('')}
+    </div>
+  `};
+}
+/* ---------- إعلانات (الإدارة فقط) ---------- */
+function adBannerHTML(a){
+  if(a.image){
+    return `<div class="ad-banner" style="padding:0;">
+      <img src="${a.image}" style="width:100%;display:block;max-height:160px;object-fit:cover;">
+      ${a.text?`<div style="padding:10px 14px;background:${esc(a.color)};color:${esc(a.textColor||'#fff')};font-weight:700;font-size:13.5px;">📣 ${esc(a.text)}</div>`:''}
+    </div>`;
+  }
+  return `<div class="ad-banner" style="background:${esc(a.color)};color:${esc(a.textColor||'#fff')};">📣 ${esc(a.text)}</div>`;
+}
+function renderAdsHTML(){
+  const ads = (DB.ads||[]).filter(a=>a.active);
+  if(!ads.length) return '';
+  return ads.map(adBannerHTML).join('');
+}
+const AD_COLORS = ['#1DBF73','#0F6B5C','#C98A3E','#3D6EA5','#8A5A9E','#B3413B'];
+function screenAdminAds(){
+  const ads = DB.ads||[];
+  const preview = S.draft.adImage;
+  return { topbar:true, nav:true, navHTML:adminNav(),
+    topbarHTML: topbarHTML('الإعلانات', {onBack:"go('admin-more')"}),
+    html:`
+    <div class="card stack">
+      <div style="font-weight:700;">إعلان جديد</div>
+      <div>
+        <label>صورة الإعلان (اختياري لكنها بتخلي الإعلان يبان أوضح)</label>
+        ${preview?`<div style="border-radius:var(--radius-md);overflow:hidden;margin:6px 0;"><img src="${preview}" style="width:100%;max-height:160px;object-fit:cover;display:block;"></div>`:''}
+        <div class="row" style="gap:8px;margin-top:6px;">
+          <button class="btn btn-outline btn-sm" onclick="uploadAdImage()">🖼️ ${preview?'تغيير الصورة':'رفع صورة'}</button>
+          ${preview?`<button class="btn btn-danger-outline btn-sm" onclick="S.draft.adImage=null;render()">إزالة الصورة</button>`:''}
+        </div>
+      </div>
+      <div class="field" style="margin-bottom:0;"><label>نص الإعلان (اختياري لو فيه صورة)</label><textarea id="adText" rows="2" placeholder="مثال: خصم 20% على كشف يوم الجمعة"></textarea></div>
+      <div>
+        <label>اختر لون الإعلان</label>
+        <div class="row" style="gap:8px;">
+          ${AD_COLORS.map((c,i)=>`<div onclick="S.draft.adColor='${c}';render()" style="width:30px;height:30px;border-radius:50%;background:${c};cursor:pointer;border:3px solid ${S.draft.adColor===c||(!S.draft.adColor&&i===0)?'#000':'transparent'};"></div>`).join('')}
+        </div>
+      </div>
+      <button class="btn btn-primary" onclick="addAd()">نشر الإعلان</button>
+    </div>
+    <h3 style="font-size:14px;margin:16px 0 8px;">الإعلانات الحالية</h3>
+    <div class="stack">
+      ${ads.length===0?`<div class="empty"><div class="ic">📣</div>لا توجد إعلانات</div>`:
+      ads.map(a=>`<div class="card">
+        <div style="margin-bottom:8px;">${adBannerHTML(a)}</div>
+        <div class="row" style="gap:8px;">
+          <button class="btn btn-outline btn-sm" onclick="toggleAd('${a.id}')">${a.active?'إيقاف':'تفعيل'}</button>
+          <button class="btn btn-danger-outline btn-sm" onclick="deleteAd('${a.id}')">حذف</button>
+        </div>
+      </div>`).join('')}
+    </div>`
+  };
+}
+function uploadAdImage(){
+  pickImage(640, 0.65, dataUrl=>{
+    S.draft.adImage = dataUrl;
+    render();
+  });
+}
+function addAd(){
+  const text = document.getElementById('adText').value.trim();
+  const image = S.draft.adImage || null;
+  if(!text && !image){ showToast('اكتب نص الإعلان أو ارفع صورة'); return; }
+  const color = S.draft.adColor || AD_COLORS[0];
+  if(!DB.ads) DB.ads=[];
+  DB.ads.push({id:uid('AD'),text,image,color,active:true,createdAt:Date.now()});
+  saveKey('ads'); S.draft.adColor=null; S.draft.adImage=null; showToast('تم نشر الإعلان'); render();
+}
+function toggleAd(id){ const a=(DB.ads||[]).find(x=>x.id===id); if(a){a.active=!a.active; saveKey('ads'); render();} }
+function deleteAd(id){ DB.ads = (DB.ads||[]).filter(x=>x.id!==id); saveKey('ads'); render(); }
+
+function statCard(label,value,icon){
+  return `<div class="card" style="text-align:center;padding:14px;">
+    <div style="font-size:20px;">${icon}</div>
+    <div style="font-size:20px;font-weight:800;margin-top:4px;">${value}</div>
+    <div class="tiny muted">${esc(label)}</div>
+  </div>`;
+}
+function doctorSetStatus(apptId, status){
+  if(!status) return;
+  if(status==='cancelled') cancelAppointment(apptId,'doctor');
+  else setApptStatus(apptId,status);
+  if(status==='done'){ recomputeRating(DB.appointments.find(a=>a.id===apptId).doctorId); }
+  showToast('تم تحديث حالة الحجز');
+  render();
+}
+
+function screenDoctorSchedule(d){
+  return { topbar:true, nav:true, navHTML:doctorNav(),
+    topbarHTML: topbarHTML('جدول المواعيد', {showBack:false}),
+    html:`
+    <div class="small muted" style="margin-bottom:14px;">حدد أيام العمل، ومواعيد البداية والنهاية، ومدة الكشف. سيتم توليد المواعيد تلقائيًا.</div>
+    <div class="stack">
+      ${APP_DAYS.map(wd=>{
+        const c = d.workingHours[wd.key];
+        return `<div class="card">
+          <div class="between">
+            <div style="font-weight:700;">${wd.label}</div>
+            <div class="switch ${c.enabled?'on':''}" onclick="toggleDay('${wd.key}')"><div class="knob"></div></div>
+          </div>
+          ${c.enabled?`
+          <div class="grid2" style="margin-top:10px;">
+            <div class="field" style="margin-bottom:0;"><label class="tiny">من</label><input type="time" value="${c.start}" onchange="setDayField('${wd.key}','start',this.value)"></div>
+            <div class="field" style="margin-bottom:0;"><label class="tiny">إلى</label><input type="time" value="${c.end}" onchange="setDayField('${wd.key}','end',this.value)"></div>
+          </div>
+          <div class="field" style="margin-top:10px;margin-bottom:0;"><label class="tiny">مدة الكشف (دقيقة)</label>
+            <select onchange="setDayField('${wd.key}','slotMinutes',Number(this.value))">
+              ${[15,20,30,45,60].map(m=>`<option value="${m}" ${c.slotMinutes===m?'selected':''}>${m} دقيقة</option>`).join('')}
+            </select>
+          </div>`:''}
+        </div>`;
+      }).join('')}
+    </div>
+  `};
+}
+function toggleDay(key){
+  const d = DB.doctors[S.session];
+  d.workingHours[key].enabled = !d.workingHours[key].enabled;
+  saveKey('doctors'); render();
+}
+function setDayField(key,field,val){
+  const d = DB.doctors[S.session];
+  d.workingHours[key][field]=val;
+  saveKey('doctors');
+  showToast('تم حفظ الجدول');
+}
+
+function screenDoctorProfile(d){
+  const pending = d.pendingSensitive;
+  return { topbar:true, nav:true, navHTML:doctorNav(),
+    topbarHTML: topbarHTML('ملفي الشخصي', {showBack:false}),
+    html:`
+    <div class="card" style="text-align:center;">
+      ${avatarHTML(d.name,d.id,84,d.photo)}
+      <div class="row" style="justify-content:center;gap:8px;margin-top:12px;">
+        <button class="btn btn-outline btn-sm" onclick="uploadDoctorPhoto()">📷 ${d.photo?'تغيير الصورة':'رفع صورة شخصية'}</button>
+        ${d.photo?`<button class="btn btn-danger-outline btn-sm" onclick="removeDoctorPhoto()">حذف الصورة</button>`:''}
+      </div>
+      <div class="tiny muted" style="margin-top:6px;">صورة واضحة لك أو لشعار العيادة تساعد العملاء يثقوا في ملفك</div>
+    </div>
+    <div class="card stack" style="margin-top:12px;">
+      ${pending?`<div class="pill pill-warning" style="width:fit-content;">⏳ تعديل حساس قيد مراجعة الإدارة</div>`:''}
+      <div class="field"><label>الاسم</label><input id="p_name" value="${esc(d.name)}"></div>
+      <div class="field"><label>التخصص (يحتاج موافقة الإدارة عند التغيير)</label>
+        <select id="p_spec">${DB.directory.specialties.map(s=>`<option ${s===(pending?pending.specialty:d.specialty)?'selected':''}>${esc(s)}</option>`).join('')}</select>
+      </div>
+      <div class="grid2">
+        <div class="field"><label>الدرجة العلمية</label><input id="p_degree" value="${esc(d.degree)}"></div>
+        <div class="field"><label>سنوات الخبرة</label><input id="p_exp" type="number" value="${d.experience}"></div>
+      </div>
+      <div class="field"><label>نبذة</label><textarea id="p_bio" rows="2">${esc(d.bio)}</textarea></div>
+      <div class="field"><label>رقم الترخيص (يحتاج موافقة الإدارة عند التغيير)</label><input id="p_license" value="${esc(pending?pending.license:d.license)}"></div>
+    </div>
+    <div class="card stack" style="margin-top:12px;">
+      <div style="font-weight:700;">بيانات العيادة</div>
+      <div class="field"><label>اسم العيادة</label><input id="p_clinic" value="${esc(d.clinicName)}"></div>
+      <div class="grid2">
+        <div class="field"><label>المحافظة</label>
+          <select id="p_gov">${DB.directory.governorates.map(g=>`<option ${g.name===d.governorate?'selected':''}>${esc(g.name)}</option>`).join('')}</select>
+        </div>
+        <div class="field"><label>المنطقة</label><input id="p_area" value="${esc(d.area)}"></div>
+      </div>
+      <div class="field"><label>العنوان</label><input id="p_addr" value="${esc(d.address)}"></div>
+      <div class="grid2">
+        <div class="field"><label>هاتف العيادة</label><input id="p_cphone" value="${esc(d.clinicPhone)}"></div>
+        <div class="field"><label>سعر الكشف</label><input id="p_price" type="number" value="${d.price}"></div>
+      </div>
+    </div>
+    <button class="btn btn-primary" style="margin-top:16px;" onclick="saveDoctorProfile()">حفظ التعديلات</button>
+    <button class="btn btn-danger-outline" style="margin-top:10px;" onclick="logout()">تسجيل الخروج</button>
+  `};
+}
+function saveDoctorProfile(){
+  const d = DB.doctors[S.session];
+  d.name = document.getElementById('p_name').value.trim()||d.name;
+  d.degree = document.getElementById('p_degree').value.trim();
+  d.experience = Number(document.getElementById('p_exp').value||0);
+  d.bio = document.getElementById('p_bio').value.trim();
+  d.clinicName = document.getElementById('p_clinic').value.trim();
+  d.governorate = document.getElementById('p_gov').value;
+  d.area = document.getElementById('p_area').value.trim();
+  d.address = document.getElementById('p_addr').value.trim();
+  d.clinicPhone = document.getElementById('p_cphone').value.trim();
+  d.price = Number(document.getElementById('p_price').value||0);
+
+  const newSpec = document.getElementById('p_spec').value;
+  const newLicense = document.getElementById('p_license').value.trim();
+  if(newSpec!==d.specialty || newLicense!==d.license){
+    d.pendingSensitive = {specialty:newSpec, license:newLicense, requestedAt:Date.now()};
+    addNotification('admin', `طلب تعديل بيانات حساسة من د. ${d.name}`);
+    showToast('تم حفظ التعديلات، والتغييرات الحساسة بانتظار موافقة الإدارة');
+  } else {
+    showToast('تم حفظ التعديلات');
+  }
+  saveKey('doctors');
+  render();
+}
+function uploadDoctorPhoto(){
+  pickImage(360, 0.7, dataUrl=>{
+    const d = DB.doctors[S.session];
+    d.photo = dataUrl;
+    saveKey('doctors');
+    showToast('تم رفع الصورة');
+    render();
+  });
+}
+function removeDoctorPhoto(){
+  const d = DB.doctors[S.session];
+  delete d.photo;
+  saveKey('doctors');
+  showToast('تم حذف الصورة');
+  render();
+}
+
+/* ============================= مسار الإدارة ============================= */
+function adminNav(){
+  return navBtn('الرئيسية','📊','admin-dashboard',['admin-dashboard'])
+       + navBtn('الطلبات','🗂️','admin-requests',['admin-requests'])
+       + navBtn('الحجوزات','📅','admin-appointments',['admin-appointments'])
+       + navBtn('الرسائل','💬','admin-messages',['admin-messages','admin-chat'])
+       + navBtn('المزيد','⚙️','admin-more',['admin-more','admin-specialties','admin-locations','admin-reviews','admin-settings']);
+}
+function adminRouter(){
+  switch(S.screen){
+    case 'admin-dashboard': return screenAdminDashboard();
+    case 'admin-requests': return screenAdminRequests();
+    case 'admin-doctor-profile': return screenAdminDoctorProfile();
+    case 'admin-patient-profile': return screenAdminPatientProfile();
+    case 'admin-appointments': return screenAdminAppointments();
+    case 'admin-messages': return screenAdminMessages();
+    case 'admin-chat': return screenChat(S.params.type, S.params.userId, S.params.name, true);
+    case 'admin-more': return screenAdminMore();
+    case 'admin-specialties': return screenAdminSpecialties();
+    case 'admin-locations': return screenAdminLocations();
+    case 'admin-reviews': return screenAdminReviews();
+    case 'admin-settings': return screenAdminSettings();
+    case 'admin-ads': return screenAdminAds();
+    default: S.screen='admin-dashboard'; return screenAdminDashboard();
+  }
+}
+function screenAdminDashboard(){
+  const pats = patientList(), docs = doctorList(), appts = DB.appointments;
+  const pendingDocs = docs.filter(d=>d.status==='pending').length + docs.filter(d=>d.pendingSensitive).length;
+  const pendingAppts = appts.filter(a=>a.status==='pending_admin').length;
+  const today = todayStr(0);
+  return { topbar:true, nav:true, navHTML:adminNav(),
+    topbarHTML: topbarHTML('لوحة الإدارة', {showBack:false}),
+    html:`
+    <div class="grid2">
+      ${statCard('إجمالي العملاء', pats.length,'👥')}
+      ${statCard('إجمالي الأطباء', docs.length,'🩺')}
+      ${statCard('طلبات حسابات', pendingDocs + pats.filter(p=>p.status==='pending').length,'⏳')}
+      ${statCard('حجوزات تحتاج تأكيد', pendingAppts,'🆕')}
+      ${statCard('إجمالي الحجوزات', appts.length,'📅')}
+      ${statCard('حجوزات اليوم', appts.filter(a=>a.date===today && a.status!=='cancelled').length,'📌')}
+      ${statCard('حجوزات ملغاة', appts.filter(a=>a.status==='cancelled').length,'❌')}
+      ${statCard('حجوزات قادمة', appts.filter(a=>a.status!=='cancelled'&&a.status!=='done'&&a.date>=today).length,'⏭️')}
+      ${statCard('التقييمات', DB.reviews.length,'⭐')}
+    </div>
+    <div style="margin-top:18px;">
+      <button class="btn btn-outline" onclick="go('admin-requests')">مراجعة الطلبات الجديدة</button>
+    </div>
+  `};
+}
+function screenAdminRequests(){
+  const tab = S.draft.reqTab||'doctors';
+  const pendingDocs = doctorList().filter(d=>d.status==='pending');
+  const sensitiveDocs = doctorList().filter(d=>d.pendingSensitive);
+  const pendingPats = patientList().filter(p=>p.status==='pending');
+  const allDocs = doctorList();
+  const allPats = patientList();
+  const search = (S.draft.reqSearch||'').toLowerCase();
+
+  return { topbar:true, nav:true, navHTML:adminNav(),
+    topbarHTML: topbarHTML('طلبات التسجيل والحسابات', {showBack:false}),
+    html:`
+    <div class="tabs" style="margin-bottom:14px;">
+      <div class="tab ${tab==='doctors'?'active':''}" onclick="S.draft.reqTab='doctors';render()">الأطباء</div>
+      <div class="tab ${tab==='patients'?'active':''}" onclick="S.draft.reqTab='patients';render()">العملاء</div>
+    </div>
+    <input placeholder="بحث بالاسم أو الهاتف أو التخصص" style="margin-bottom:14px;" value="${esc(S.draft.reqSearch||'')}" oninput="S.draft.reqSearch=this.value;render()">
+
+    ${tab==='doctors'? `
+      ${pendingDocs.length? `<h3 style="font-size:14px;margin-bottom:8px;">طلبات جديدة (${pendingDocs.length})</h3><div class="stack" style="margin-bottom:18px;">${pendingDocs.map(doctorRequestCard).join('')}</div>`:''}
+      ${sensitiveDocs.length? `<h3 style="font-size:14px;margin-bottom:8px;">طلبات تعديل حساسة (${sensitiveDocs.length})</h3><div class="stack" style="margin-bottom:18px;">${sensitiveDocs.map(sensitiveEditCard).join('')}</div>`:''}
+      <h3 style="font-size:14px;margin-bottom:8px;">كل الأطباء</h3>
+      <div class="stack">${allDocs.filter(d=> !search || d.name.toLowerCase().includes(search)||d.phone.includes(search)||d.specialty.toLowerCase().includes(search)).map(doctorAccountCard).join('') || '<div class="empty">لا يوجد أطباء</div>'}</div>
+    ` : `
+      ${pendingPats.length? `<h3 style="font-size:14px;margin-bottom:8px;">طلبات جديدة (${pendingPats.length})</h3><div class="stack" style="margin-bottom:18px;">${pendingPats.map(patientRequestCard).join('')}</div>`:''}
+      <h3 style="font-size:14px;margin-bottom:8px;">كل العملاء</h3>
+      <div class="stack">${allPats.filter(p=> !search || p.name.toLowerCase().includes(search)||p.phone.includes(search)).map(patientAccountCard).join('') || '<div class="empty">لا يوجد عملاء</div>'}</div>
+    `}
+  `};
+}
+function doctorRequestCard(d){
+  return `<div class="card">
+    <div class="row" style="align-items:flex-start;">
+      ${avatarHTML(d.name,d.id,48,d.photo)}
+      <div style="flex:1;">
+        <div style="font-weight:700;">${esc(d.name)}</div>
+        <div class="small muted">${esc(d.specialty)} · ${esc(d.degree)} · خبرة ${d.experience} سنة</div>
+        <div class="small muted">📞 ${esc(d.phone)} · ترخيص: ${esc(d.license)}</div>
+        <div class="small muted">🏥 ${esc(d.clinicName)} — ${esc(d.governorate)}، ${esc(d.area)}</div>
+      </div>
+    </div>
+    <button class="btn btn-outline btn-sm" style="margin-top:10px;" onclick="go('admin-doctor-profile',{id:'${d.id}'})">📄 عرض الملف الكامل</button>
+    <div class="grid2" style="margin-top:8px;">
+      <a class="btn btn-outline btn-sm" style="text-decoration:none;text-align:center;" href="${whatsappLink(d.phone)}" target="_blank" rel="noopener">📱 تواصل واتساب</a>
+      <button class="btn btn-primary btn-sm" onclick="approveDoctor('${d.id}')">✔ موافقة</button>
+    </div>
+    <button class="btn btn-danger-outline btn-sm" style="margin-top:8px;" onclick="rejectDoctor('${d.id}')">رفض الطلب</button>
+  </div>`;
+}
+function patientRequestCard(p){
+  return `<div class="card">
+    <div class="row">
+      ${avatarHTML(p.name,p.id,44)}
+      <div style="flex:1;"><div style="font-weight:700;">${esc(p.name)}</div><div class="small muted">📞 ${esc(p.phone)} ${p.email?('· '+esc(p.email)):''}</div></div>
+    </div>
+    <button class="btn btn-outline btn-sm" style="margin-top:10px;" onclick="go('admin-patient-profile',{id:'${p.id}'})">📄 عرض الملف الكامل</button>
+    <div class="grid2" style="margin-top:8px;">
+      <a class="btn btn-outline btn-sm" style="text-decoration:none;text-align:center;" href="${whatsappLink(p.phone)}" target="_blank" rel="noopener">📱 تواصل واتساب</a>
+      <button class="btn btn-primary btn-sm" onclick="approvePatient('${p.id}')">✔ موافقة</button>
+    </div>
+    <button class="btn btn-danger-outline btn-sm" style="margin-top:8px;" onclick="rejectPatient('${p.id}')">رفض الطلب</button>
+  </div>`;
+}
+function sensitiveEditCard(d){
+  const ps = d.pendingSensitive;
+  return `<div class="card">
+    <div style="font-weight:700;">${esc(d.name)}</div>
+    <div class="small muted" style="margin-top:4px;">التخصص: ${esc(d.specialty)} ← <b>${esc(ps.specialty)}</b></div>
+    <div class="small muted">الترخيص: ${esc(d.license)} ← <b>${esc(ps.license)}</b></div>
+    <div class="grid2" style="margin-top:10px;">
+      <button class="btn btn-primary btn-sm" onclick="approveSensitive('${d.id}')">✔ موافقة</button>
+      <button class="btn btn-danger-outline btn-sm" onclick="rejectSensitive('${d.id}')">رفض</button>
+    </div>
+  </div>`;
+}
+function doctorAccountCard(d){
+  return `<div class="card">
+    <div class="between">
+      <div class="row">${avatarHTML(d.name,d.id,40,d.photo)}<div><div style="font-weight:700;font-size:14px;">${esc(d.name)}</div><div class="tiny muted">${esc(d.specialty)}</div></div></div>
+      <span class="pill pill-${d.status==='approved'?'success':d.status==='pending'?'warning':'danger'}">${STATUS_LABELS[d.status]}</span>
+    </div>
+    <div class="row" style="margin-top:10px;gap:8px;flex-wrap:wrap;">
+      <button class="btn btn-outline btn-sm" onclick="go('admin-doctor-profile',{id:'${d.id}'})">📄 الملف</button>
+      ${d.status==='approved'?`<button class="btn btn-danger-outline btn-sm" onclick="suspendUser('doctors','${d.id}')">إيقاف</button>`:''}
+      ${d.status==='suspended'?`<button class="btn btn-outline btn-sm" onclick="reactivateUser('doctors','${d.id}')">إعادة تفعيل</button>`:''}
+      <button class="btn btn-outline btn-sm" onclick="startAdminChat('doctor','${d.id}','${esc(d.name)}')">مراسلة</button>
+      <button class="btn btn-danger-outline btn-sm" onclick="deleteUser('doctors','${d.id}')">حذف</button>
+    </div>
+  </div>`;
+}
+function patientAccountCard(p){
+  return `<div class="card">
+    <div class="between">
+      <div class="row">${avatarHTML(p.name,p.id,40)}<div><div style="font-weight:700;font-size:14px;">${esc(p.name)}</div><div class="tiny muted">${esc(p.phone)}</div></div></div>
+      <span class="pill pill-${p.status==='approved'?'success':p.status==='pending'?'warning':'danger'}">${STATUS_LABELS[p.status]}</span>
+    </div>
+    <div class="row" style="margin-top:10px;gap:8px;flex-wrap:wrap;">
+      <button class="btn btn-outline btn-sm" onclick="go('admin-patient-profile',{id:'${p.id}'})">📄 الملف</button>
+      ${p.status==='approved'?`<button class="btn btn-danger-outline btn-sm" onclick="suspendUser('patients','${p.id}')">إيقاف</button>`:''}
+      ${p.status==='suspended'?`<button class="btn btn-outline btn-sm" onclick="reactivateUser('patients','${p.id}')">إعادة تفعيل</button>`:''}
+      <button class="btn btn-outline btn-sm" onclick="startAdminChat('patient','${p.id}','${esc(p.name)}')">مراسلة</button>
+      <button class="btn btn-danger-outline btn-sm" onclick="deleteUser('patients','${p.id}')">حذف</button>
+    </div>
+  </div>`;
+}
+function screenAdminDoctorProfile(){
+  const d = DB.doctors[S.params.id];
+  if(!d) { go('admin-requests'); return screenAdminRequests(); }
+  const wh = APP_DAYS.filter(x=>d.workingHours && d.workingHours[x.key] && d.workingHours[x.key].enabled)
+    .map(x=>`${x.label}: ${d.workingHours[x.key].start} – ${d.workingHours[x.key].end}`).join(' | ') || 'لم يحدد مواعيد عمل بعد';
+  const apptCount = DB.appointments.filter(a=>a.doctorId===d.id && a.status!=='cancelled').length;
+  return { topbar:true, nav:true, navHTML:adminNav(),
+    topbarHTML: topbarHTML('ملف الطبيب الكامل', {onBack:"go('admin-requests')"}),
+    html:`
+    <div class="card" style="text-align:center;">
+      ${avatarHTML(d.name,d.id,64,d.photo)}
+      <div style="font-weight:800;font-size:17px;margin-top:8px;">${esc(d.name)}</div>
+      <div class="small muted">${esc(d.degree)} · ${esc(d.specialty)}</div>
+      <span class="pill pill-${d.status==='approved'?'success':d.status==='pending'?'warning':'danger'}" style="margin-top:8px;">${STATUS_LABELS[d.status]}</span>
+    </div>
+    <div class="card stack" style="margin-top:12px;">
+      <div style="font-weight:700;">بيانات التواصل</div>
+      <div class="small">📞 ${esc(d.phone)} ${d.clinicPhone?('· عيادة: '+esc(d.clinicPhone)):''}</div>
+      <div class="small">✉️ ${esc(d.email||'—')}</div>
+    </div>
+    <div class="card stack" style="margin-top:12px;">
+      <div style="font-weight:700;">بيانات العيادة والمهنة</div>
+      <div class="small">🏥 ${esc(d.clinicName)} — ${esc(d.governorate)}، ${esc(d.area)}</div>
+      <div class="small">📍 ${esc(d.address)}</div>
+      <div class="small">💵 سعر الكشف: ${d.price} جنيه · خبرة ${d.experience} سنة</div>
+      <div class="small">🪪 رقم الترخيص/الكارنيه: ${esc(d.license)}</div>
+      <div class="small">🕒 مواعيد العمل: ${esc(wh)}</div>
+      <div class="small">📅 عدد الحجوزات: ${apptCount} · التقييم: ${d.rating? d.rating.toFixed(1):'جديد'}</div>
+    </div>
+    <div class="card stack" style="margin-top:12px;background:var(--danger-tint);border-color:var(--danger);">
+      <div style="font-weight:700;">بيانات الهوية (سرّية)</div>
+      <div class="small">الرقم القومي: ${esc(d.nationalId||'—')}</div>
+      <div class="small">تاريخ الميلاد: ${esc(d.birthDate||'—')}</div>
+      <div class="small">تم قبول الإقرار القانوني: ${d.policyAccepted? '✔ نعم':'✖ لا'} ${d.policyAcceptedAt? ('— '+new Date(d.policyAcceptedAt).toLocaleDateString('ar-EG')):''}</div>
+    </div>
+    <div class="grid2" style="margin-top:14px;">
+      ${d.status==='pending'?`<button class="btn btn-primary" onclick="approveDoctor('${d.id}')">✔ موافقة</button><button class="btn btn-danger-outline" onclick="rejectDoctor('${d.id}')">رفض</button>`:
+      d.status==='approved'?`<button class="btn btn-danger-outline" onclick="suspendUser('doctors','${d.id}')">إيقاف الحساب</button><button class="btn btn-outline" onclick="startAdminChat('doctor','${d.id}','${esc(d.name)}')">مراسلة</button>`:
+      `<button class="btn btn-outline" onclick="reactivateUser('doctors','${d.id}')">إعادة تفعيل</button><button class="btn btn-outline" onclick="startAdminChat('doctor','${d.id}','${esc(d.name)}')">مراسلة</button>`}
+    </div>`
+  };
+}
+function screenAdminPatientProfile(){
+  const p = DB.patients[S.params.id];
+  if(!p) { go('admin-requests'); return screenAdminRequests(); }
+  const myAppts = DB.appointments.filter(a=>a.patientId===p.id).sort((a,b)=>(a.date+a.time)<(b.date+b.time)?1:-1);
+  return { topbar:true, nav:true, navHTML:adminNav(),
+    topbarHTML: topbarHTML('ملف العميل الكامل', {onBack:"go('admin-requests')"}),
+    html:`
+    <div class="card" style="text-align:center;">
+      ${avatarHTML(p.name,p.id,64)}
+      <div style="font-weight:800;font-size:17px;margin-top:8px;">${esc(p.name)}</div>
+      <span class="pill pill-${p.status==='approved'?'success':p.status==='pending'?'warning':'danger'}" style="margin-top:8px;">${STATUS_LABELS[p.status]}</span>
+    </div>
+    <div class="card stack" style="margin-top:12px;">
+      <div style="font-weight:700;">بيانات التواصل</div>
+      <div class="small">📞 ${esc(p.phone)}</div>
+      <div class="small">✉️ ${esc(p.email||'—')}</div>
+    </div>
+    <div class="card stack" style="margin-top:12px;">
+      <div style="font-weight:700;">سجل الحجوزات (${myAppts.length})</div>
+      ${myAppts.length===0?`<div class="small muted">لا يوجد حجوزات</div>`:myAppts.slice(0,10).map(a=>{
+        const d = DB.doctors[a.doctorId];
+        return `<div class="small">${fmtDate(a.date)} ${a.time} — د. ${esc(d?d.name:'')} <span class="pill pill-${APPT_COLORS[a.status]}">${APPT_LABELS[a.status]}</span></div>`;
+      }).join('')}
+    </div>
+    <div class="grid2" style="margin-top:14px;">
+      ${p.status==='pending'?`<button class="btn btn-primary" onclick="approvePatient('${p.id}')">✔ موافقة</button><button class="btn btn-danger-outline" onclick="rejectPatient('${p.id}')">رفض</button>`:
+      p.status==='approved'?`<button class="btn btn-danger-outline" onclick="suspendUser('patients','${p.id}')">إيقاف الحساب</button><button class="btn btn-outline" onclick="startAdminChat('patient','${p.id}','${esc(p.name)}')">مراسلة</button>`:
+      `<button class="btn btn-outline" onclick="reactivateUser('patients','${p.id}')">إعادة تفعيل</button><button class="btn btn-outline" onclick="startAdminChat('patient','${p.id}','${esc(p.name)}')">مراسلة</button>`}
+    </div>`
+  };
+}
+function approveDoctor(id){ DB.doctors[id].status='approved'; saveKey('doctors'); addNotification(id,'تم تفعيل حسابك، يمكنك الآن استخدام التطبيق'); showToast('تمت الموافقة على الطبيب'); render(); }
+function rejectDoctor(id){ DB.doctors[id].status='rejected'; saveKey('doctors'); addNotification(id,'نأسف، تم رفض طلب تسجيلك. تواصل مع الإدارة لمزيد من التفاصيل'); showToast('تم رفض الطلب'); render(); }
+function approvePatient(id){ DB.patients[id].status='approved'; saveKey('patients'); addNotification(id,'تم تفعيل حسابك، يمكنك الآن استخدام التطبيق'); showToast('تمت الموافقة على العميل'); render(); }
+function rejectPatient(id){ DB.patients[id].status='rejected'; saveKey('patients'); addNotification(id,'نأسف، تم رفض طلب تسجيلك. تواصل مع الإدارة لمزيد من التفاصيل'); showToast('تم رفض الطلب'); render(); }
+function suspendUser(table,id){ DB[table][id].status='suspended'; saveKey(table); addNotification(id,'تم إيقاف حسابك من قبل الإدارة'); showToast('تم إيقاف الحساب'); render(); }
+function reactivateUser(table,id){ DB[table][id].status='approved'; saveKey(table); addNotification(id,'تم إعادة تفعيل حسابك'); showToast('تم إعادة التفعيل'); render(); }
+function deleteUser(table,id){
+  if(!confirm('هل تريد حذف هذا الحساب نهائيًا؟')) return;
+  delete DB[table][id]; saveKey(table); showToast('تم حذف الحساب'); render();
+}
+function approveSensitive(id){
+  const d = DB.doctors[id]; const ps = d.pendingSensitive;
+  d.specialty = ps.specialty; d.license = ps.license; d.pendingSensitive=null;
+  saveKey('doctors'); addNotification(id,'تمت الموافقة على تعديل بياناتك الحساسة'); showToast('تم اعتماد التعديل'); render();
+}
+function rejectSensitive(id){
+  const d = DB.doctors[id]; d.pendingSensitive=null;
+  saveKey('doctors'); addNotification(id,'تم رفض تعديل بياناتك الحساسة'); showToast('تم رفض التعديل'); render();
+}
+
+function screenAdminAppointments(){
+  const search = (S.draft.apSearch||'').toLowerCase();
+  let list = DB.appointments.slice().sort((a,b)=>b.createdAt-a.createdAt);
+  if(search){
+    list = list.filter(a=>{
+      const p = DB.patients[a.patientId], d=DB.doctors[a.doctorId];
+      return (p&&p.name.toLowerCase().includes(search)) || (d&&d.name.toLowerCase().includes(search)) || a.id.toLowerCase().includes(search) || a.date.includes(search);
+    });
+  }
+  const pendingList = list.filter(a=>a.status==='pending_admin');
+  const otherList = list.filter(a=>a.status!=='pending_admin');
+  const apptCard = a=>{
+    const p=DB.patients[a.patientId], d=DB.doctors[a.doctorId];
+    return `<div class="card">
+      <div class="between"><div style="font-weight:700;font-size:13.5px;">${esc(p?p.name:'محذوف')} ← د.${esc(d?d.name:'محذوف')}</div><span class="pill pill-${APPT_COLORS[a.status]}">${APPT_LABELS[a.status]}</span></div>
+      <div class="small muted" style="margin-top:4px;">📅 ${fmtDate(a.date)} — ⏰ ${a.time} · ${a.id} · ${a.price} ج.م</div>
+      ${a.status==='pending_admin'?`<div class="grid2" style="margin-top:8px;">
+        <button class="btn btn-primary btn-sm" onclick="adminConfirmAppt('${a.id}')">✔ تأكيد الحجز</button>
+        <button class="btn btn-danger-outline btn-sm" onclick="adminCancelAppt('${a.id}')">رفض/إلغاء</button>
+      </div>`:
+      a.status!=='cancelled'?`<button class="btn btn-danger-outline btn-sm" style="margin-top:8px;" onclick="adminCancelAppt('${a.id}')">إلغاء الحجز</button>`:''}
+    </div>`;
+  };
+  return { topbar:true, nav:true, navHTML:adminNav(),
+    topbarHTML: topbarHTML('إدارة الحجوزات', {showBack:false}),
+    html:`
+    <input placeholder="بحث باسم العميل / الطبيب / رقم الحجز / التاريخ" style="margin-bottom:14px;" value="${esc(S.draft.apSearch||'')}" oninput="S.draft.apSearch=this.value;render()">
+    ${pendingList.length? `<h3 style="font-size:14px;margin-bottom:8px;color:var(--accent);">⏳ طلبات حجز تحتاج تأكيد (${pendingList.length})</h3><div class="stack" style="margin-bottom:18px;">${pendingList.map(apptCard).join('')}</div>`:''}
+    <h3 style="font-size:14px;margin-bottom:8px;">كل الحجوزات</h3>
+    <div class="stack">
+      ${otherList.length===0? `<div class="empty"><div class="ic">📅</div>لا توجد حجوزات</div>`: otherList.map(apptCard).join('')}
+    </div>
+  `};
+}
+function adminCancelAppt(id){
+  const a = DB.appointments.find(x=>x.id===id); a.status='cancelled'; saveKey('appointments');
+  const p=DB.patients[a.patientId], d=DB.doctors[a.doctorId];
+  if(p) addNotification(p.id,'تم إلغاء حجزك من قبل الإدارة');
+  if(d) addNotification(d.id,'تم إلغاء أحد حجوزاتك من قبل الإدارة');
+  showToast('تم إلغاء الحجز'); render();
+}
+
+function screenAdminMessages(){
+  const threads = Object.values(DB.messages).sort((a,b)=>b.updatedAt-a.updatedAt);
+  return { topbar:true, nav:true, navHTML:adminNav(),
+    topbarHTML: topbarHTML('الرسائل', {showBack:false, right:`<button class="btn btn-ghost" style="font-size:13px;" onclick="broadcastPrompt()">📣 بث عام</button>`}),
+    html:`<div class="stack">
+      ${threads.length===0? `<div class="empty"><div class="ic">💬</div>لا توجد محادثات بعد</div>`:
+      threads.map(t=>{
+        const table = t.type==='patient'?DB.patients:DB.doctors;
+        const u = table[t.userId];
+        const last = t.messages[t.messages.length-1];
+        return `<div class="card" style="cursor:pointer;" onclick="go('admin-chat',{type:'${t.type}',userId:'${t.userId}',name:'${esc(u?u.name:'')}'})">
+          <div class="between">
+            <div class="row">${avatarHTML(u?u.name:'?',t.userId,40)}<div><div style="font-weight:700;font-size:13.5px;">${esc(u?u.name:'مستخدم محذوف')}</div><div class="tiny muted">${t.type==='patient'?'عميل':'دكتور'}</div></div></div>
+            <span class="pill pill-${t.status==='new'?'warning':t.status==='replied'?'success':'muted'}">${t.status==='new'?'جديدة':t.status==='replied'?'تم الرد':'مغلقة'}</span>
+          </div>
+          ${last?`<div class="small muted" style="margin-top:8px;">${esc(last.text.slice(0,60))}</div>`:''}
+        </div>`;
+      }).join('')}
+    </div>`
+  };
+}
+function startAdminChat(type,userId,name){ go('admin-chat',{type,userId,name}); }
+function broadcastPrompt(){
+  const audience = confirm('اضغط "موافق" لإرسال إشعار لكل العملاء، أو "إلغاء" لإرسال إشعار لكل الأطباء') ? 'patients':'doctors';
+  const text = prompt('اكتب نص الإشعار العام:');
+  if(!text) return;
+  Object.keys(DB[audience]).forEach(id=>addNotification(id,text));
+  showToast('تم إرسال الإشعار العام');
+}
+
+function screenChat(type, userId, title, isAdminView){
+  const tid = ensureThread(type,userId);
+  const thread = DB.messages[tid];
+  const backScreen = isAdminView? 'admin-messages' : (type==='patient'?'patient-account':'doctor-dashboard');
+  const otherName = isAdminView ? (S.params.name||'') : 'الإدارة';
+  return { topbar:true, nav: !isAdminView, navHTML: type==='patient'?patientNav():doctorNav(),
+    topbarHTML: topbarHTML(title, {onBack:`go('${backScreen}')`, right: isAdminView?`<button class="btn btn-ghost" style="font-size:12px;" onclick="closeThread('${tid}')">إغلاق المحادثة</button>`:''}),
+    html:`
+    <div style="display:flex;flex-direction:column;gap:12px;min-height:50vh;">
+      ${thread.messages.length===0?`<div class="empty"><div class="ic">💬</div>ابدأ المحادثة مع ${esc(otherName||'الإدارة')}</div>`:
+      thread.messages.map(m=>{
+        const mine = isAdminView ? m.from==='admin' : m.from!=='admin';
+        const time = new Date(m.time).toLocaleTimeString('ar-EG',{hour:'2-digit',minute:'2-digit'});
+        return `<div class="chat-row ${mine?'me':'them'}">
+          ${avatarHTML(mine?(isAdminView?'إدارة':'أنا'):(isAdminView?otherName:'إدارة'), userId+(mine?'m':'o'), 30)}
+          <div class="bubble ${mine?'me':'them'}">${esc(m.text)}<span class="btime">${time}</span></div>
+        </div>`;
+      }).join('')}
+    </div>
+    <div class="row" style="position:sticky;bottom:0;background:var(--bg);padding-top:10px;margin-top:14px;">
+      <input id="chatInput" placeholder="اكتب رسالتك..." onkeydown="if(event.key==='Enter')sendChatMessage('${type}','${userId}',${!!isAdminView})">
+      <button class="btn btn-primary" style="width:auto;padding:12px 18px;" onclick="sendChatMessage('${type}','${userId}',${!!isAdminView})">➤ إرسال</button>
+    </div>
+  `};
+}
+function sendChatMessage(type,userId,isAdmin){
+  const input = document.getElementById('chatInput');
+  const text = input.value.trim();
+  if(!text) return;
+  sendMessage(type,userId, isAdmin?'admin':'user', text);
+  render();
+  setTimeout(()=>{ const el=document.getElementById('chatInput'); if(el) el.focus(); },0);
+}
+function closeThread(tid){ DB.messages[tid].status='closed'; saveKey('messages'); showToast('تم إغلاق المحادثة'); go('admin-messages'); }
+
+function screenAdminMore(){
+  return { topbar:true, nav:true, navHTML:adminNav(),
+    topbarHTML: topbarHTML('المزيد', {showBack:false}),
+    html:`<div class="stack">
+      ${accountRow('📣','الإعلانات', "go('admin-ads')")}
+      ${accountRow('🏷️','التخصصات', "go('admin-specialties')")}
+      ${accountRow('📍','المحافظات والمناطق', "go('admin-locations')")}
+      ${accountRow('⭐','التقييمات', "go('admin-reviews')", DB.reviews.filter(r=>!r.approved).length || null)}
+      ${accountRow('🔐','إعدادات الإدارة', "go('admin-settings')")}
+    </div>
+    <button class="btn btn-danger-outline" style="margin-top:22px;" onclick="logout()">تسجيل الخروج</button>
+  `};
+}
+function screenAdminSpecialties(){
+  return { topbar:true, nav:true, navHTML:adminNav(),
+    topbarHTML: topbarHTML('إدارة التخصصات', {onBack:"go('admin-more')"}),
+    html:`
+    <div class="row" style="margin-bottom:14px;">
+      <input id="newSpec" placeholder="اسم تخصص جديد">
+      <button class="btn btn-primary" style="width:auto;padding:11px 16px;" onclick="addSpecialty()">إضافة</button>
+    </div>
+    <div class="stack">
+      ${DB.directory.specialties.map((s,i)=>`<div class="card between"><span>${esc(s)}</span><span style="cursor:pointer;color:var(--danger);" onclick="removeSpecialty(${i})">حذف</span></div>`).join('')}
+    </div>`
+  };
+}
+function addSpecialty(){
+  const v = document.getElementById('newSpec').value.trim();
+  if(!v) return;
+  if(DB.directory.specialties.includes(v)){ showToast('التخصص موجود بالفعل'); return; }
+  DB.directory.specialties.push(v); saveKey('directory'); render();
+}
+function removeSpecialty(i){ DB.directory.specialties.splice(i,1); saveKey('directory'); render(); }
+
+function screenAdminLocations(){
+  const govs = DB.directory.governorates;
+  return { topbar:true, nav:true, navHTML:adminNav(),
+    topbarHTML: topbarHTML('المحافظات والمناطق', {onBack:"go('admin-more')"}),
+    html:`
+    <div class="row" style="margin-bottom:14px;">
+      <input id="newGov" placeholder="اسم محافظة جديدة">
+      <button class="btn btn-primary" style="width:auto;padding:11px 16px;" onclick="addGov()">إضافة</button>
+    </div>
+    <div class="stack">
+      ${govs.map((g,gi)=>`
+        <div class="card">
+          <div class="between"><div style="font-weight:700;">${esc(g.name)}</div><span style="cursor:pointer;color:var(--danger);" onclick="removeGov(${gi})">حذف المحافظة</span></div>
+          <div class="chiprow" style="margin-top:10px;">
+            ${g.areas.map((a,ai)=>`<div class="chip" onclick="removeArea(${gi},${ai})">${esc(a)} ✕</div>`).join('')}
+          </div>
+          <div class="row" style="margin-top:10px;">
+            <input id="newArea_${gi}" placeholder="أضف منطقة جديدة">
+            <button class="btn btn-outline btn-sm" onclick="addArea(${gi})">إضافة</button>
+          </div>
+        </div>`).join('')}
+    </div>`
+  };
+}
+function addGov(){
+  const v = document.getElementById('newGov').value.trim();
+  if(!v) return;
+  DB.directory.governorates.push({name:v,areas:[]}); saveKey('directory'); render();
+}
+function removeGov(i){ DB.directory.governorates.splice(i,1); saveKey('directory'); render(); }
+function addArea(gi){
+  const el = document.getElementById('newArea_'+gi);
+  const v = el.value.trim(); if(!v) return;
+  DB.directory.governorates[gi].areas.push(v); saveKey('directory'); render();
+}
+function removeArea(gi,ai){ DB.directory.governorates[gi].areas.splice(ai,1); saveKey('directory'); render(); }
+
+function screenAdminReviews(){
+  const list = DB.reviews.slice().sort((a,b)=>(a.approved===b.approved)?b.createdAt-a.createdAt:(a.approved?1:-1));
+  return { topbar:true, nav:true, navHTML:adminNav(),
+    topbarHTML: topbarHTML('إدارة التقييمات', {onBack:"go('admin-more')"}),
+    html:`<div class="stack">
+      ${list.length===0?`<div class="empty"><div class="ic">⭐</div>لا توجد تقييمات</div>`:
+      list.map(r=>{
+        const d=DB.doctors[r.doctorId], p=DB.patients[r.patientId];
+        return `<div class="card">
+          <div class="between"><div style="font-weight:700;font-size:13.5px;">${esc(p?p.name:'')} ← د.${esc(d?d.name:'')}</div>${starsHTML(r.stars,0)}</div>
+          ${r.comment?`<div class="small muted" style="margin-top:6px;">${esc(r.comment)}</div>`:''}
+          <div class="row" style="margin-top:10px;">
+            ${!r.approved?`<button class="btn btn-primary btn-sm" onclick="approveReview('${r.id}')">نشر</button>`:`<span class="pill pill-success">منشور</span>`}
+            <button class="btn btn-danger-outline btn-sm" onclick="deleteReview('${r.id}')">حذف</button>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>`
+  };
+}
+function approveReview(id){
+  const r = DB.reviews.find(x=>x.id===id); r.approved=true; saveKey('reviews');
+  recomputeRating(r.doctorId); showToast('تم نشر التقييم'); render();
+}
+function deleteReview(id){
+  const r = DB.reviews.find(x=>x.id===id);
+  DB.reviews = DB.reviews.filter(x=>x.id!==id); saveKey('reviews');
+  if(r) recomputeRating(r.doctorId);
+  showToast('تم حذف التقييم'); render();
+}
+
+function screenAdminSettings(){
+  return { topbar:true, nav:true, navHTML:adminNav(),
+    topbarHTML: topbarHTML('إعدادات الإدارة', {onBack:"go('admin-more')"}),
+    html:`
+    <div class="card stack">
+      <div style="font-weight:700;">تغيير كلمة مرور الإدارة</div>
+      <div class="field"><label>كلمة المرور الحالية</label><input id="curPass" type="password"></div>
+      <div class="field"><label>كلمة المرور الجديدة</label><input id="newPass" type="password"></div>
+      <div class="field" style="margin-bottom:0;"><label>تأكيد كلمة المرور الجديدة</label><input id="newPass2" type="password"></div>
+    </div>
+    <button class="btn btn-primary" style="margin-top:14px;" onclick="changeAdminPassword()">حفظ</button>
+  `};
+}
+function changeAdminPassword(){
+  const cur=document.getElementById('curPass').value, n1=document.getElementById('newPass').value, n2=document.getElementById('newPass2').value;
+  if(cur!==DB.directory.adminPassword){ showToast('كلمة المرور الحالية غير صحيحة'); return; }
+  if(!n1 || n1!==n2){ showToast('كلمة المرور الجديدة غير متطابقة'); return; }
+  DB.directory.adminPassword = n1; saveKey('directory'); showToast('تم تغيير كلمة المرور');
+  go('admin-more');
+}
+
+/* توجيه شاشة تقييم الطبيب ضمن نفس الراوتر */
+const _origPatientRouter = patientRouter;
+patientRouter = function(){
+  if(S.screen==='doctor-review') return buildDoctorReviewScreen();
+  return _origPatientRouter();
+};
+
+/* ============================= بدء التشغيل ============================= */
+initDB();
+</script>
+</body>
+</html>
